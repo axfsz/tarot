@@ -1,0 +1,47 @@
+# Server blocks for honeytime.life and tarot.opsglobalonline.com (both served by the same app).
+# Each domain needs its own certificate; duplicate the 443 block per domain or use a SAN certificate.
+# Obtain/install your certificate with your existing certificate workflow.
+# The app already sends security headers, cache headers and gzip; nginx adds
+# HTTP/2 and compression for anything the app did not compress.
+server {
+    listen 443 ssl;
+    http2 on;                      # nginx < 1.25: use "listen 443 ssl http2;" instead
+    server_name tarot.opsglobalonline.com honeytime.life www.honeytime.life;
+    ssl_certificate /etc/letsencrypt/live/tarot.opsglobalonline.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tarot.opsglobalonline.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    client_max_body_size 100k;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_types application/json application/javascript text/javascript text/css image/svg+xml application/xml text/plain application/manifest+json;
+
+    # Versioned static files and card artwork: served by the app with long-lived
+    # Cache-Control headers; let nginx buffer them for faster delivery.
+    location /static/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_buffering on;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300s;
+        proxy_buffering off;
+    }
+}
+server {
+    listen 80;
+    server_name tarot.opsglobalonline.com honeytime.life www.honeytime.life;
+    return 301 https://$host$request_uri;
+}

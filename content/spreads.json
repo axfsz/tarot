@@ -1,0 +1,1887 @@
+[
+  {
+    "id": "one",
+    "zh": "单张提醒",
+    "en": "Single-card reflection",
+    "level": "beginner",
+    "source_page": 20,
+    "version": "ppt-v2.0",
+    "positions": [
+      "核心提醒"
+    ],
+    "positions_en": [
+      "Focus"
+    ],
+    "quota_major": [],
+    "layout": "line",
+    "desc": "每日提醒、面试准备、行动重点",
+    "desc_en": "Daily focus, preparation and action",
+    "reading_groups": [
+      [
+        1
+      ]
+    ],
+    "base_count": 1,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor"
+    ],
+    "quota_label": "大 0 ＋ 小 1",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "two",
+    "zh": "双张主题—行动",
+    "en": "Theme and action",
+    "level": "beginner",
+    "source_page": 21,
+    "version": "ppt-v2.0",
+    "positions": [
+      "主题",
+      "行动"
+    ],
+    "positions_en": [
+      "Theme",
+      "Action"
+    ],
+    "quota_major": [
+      1
+    ],
+    "layout": "line",
+    "desc": "找到主题，再找下一步",
+    "desc_en": "Explore a theme and the next step",
+    "reading_groups": [
+      [
+        1,
+        2
+      ]
+    ],
+    "base_count": 2,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor"
+    ],
+    "quota_label": "大 1 ＋ 小 1",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "three",
+    "zh": "现状—阻碍—建议",
+    "en": "Situation, challenge and action",
+    "level": "beginner",
+    "source_page": 22,
+    "version": "ppt-v2.0",
+    "positions": [
+      "核心现状",
+      "主要阻碍",
+      "可做行动"
+    ],
+    "positions_en": [
+      "Situation",
+      "Challenge",
+      "Action"
+    ],
+    "quota_major": [
+      1
+    ],
+    "layout": "line",
+    "desc": "学习、工作与沟通中的具体卡点",
+    "desc_en": "A specific challenge in work, study or communication",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "base_count": 3,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 1 ＋ 小 2",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "past_present",
+    "zh": "三张时间线",
+    "en": "Past, present and observation",
+    "level": "beginner",
+    "source_page": 23,
+    "version": "ppt-v2.0",
+    "positions": [
+      "过去影响",
+      "当前状态",
+      "后续观察"
+    ],
+    "positions_en": [
+      "Past influence",
+      "Present",
+      "Further observation"
+    ],
+    "quota_major": [],
+    "layout": "line",
+    "desc": "用事实连接过去和现在，观察后续变化",
+    "desc_en": "Connect past and present; observe possible changes",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "base_count": 3,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 0 ＋ 小 3",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "action",
+    "zh": "三张行动推演",
+    "en": "Action exploration",
+    "level": "beginner",
+    "source_page": 24,
+    "version": "ppt-v2.0",
+    "positions": [
+      "目标主题",
+      "准备行动",
+      "观察变化"
+    ],
+    "positions_en": [
+      "Goal",
+      "Action",
+      "Observe changes"
+    ],
+    "quota_major": [
+      1
+    ],
+    "layout": "line",
+    "desc": "围绕一个行动设计尝试与复盘",
+    "desc_en": "Plan an action and review its effects",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "base_count": 3,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 1 ＋ 小 2",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "relationship",
+    "zh": "三张关系反思",
+    "en": "Relationship reflection",
+    "level": "beginner",
+    "source_page": 25,
+    "version": "ppt-v2.0",
+    "positions": [
+      "我的需要",
+      "互动模式",
+      "沟通行动"
+    ],
+    "positions_en": [
+      "My needs",
+      "Interaction",
+      "Communication"
+    ],
+    "quota_major": [],
+    "layout": "line",
+    "desc": "暧昧、伴侣、友情与合作沟通",
+    "desc_en": "Needs, interaction and communication",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ]
+    ],
+    "base_count": 3,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 0 ＋ 小 3",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "timeline",
+    "zh": "四张时间线",
+    "en": "Four-stage timeline",
+    "level": "beginner",
+    "source_page": 27,
+    "version": "ppt-v2.0",
+    "positions": [
+      "现在",
+      "第1个月",
+      "第2个月",
+      "第3个月"
+    ],
+    "positions_en": [
+      "Now",
+      "Month 1",
+      "Month 2",
+      "Month 3"
+    ],
+    "quota_major": [],
+    "layout": "line",
+    "desc": "预设未来三个月的观察重点",
+    "desc_en": "Observe the present and next three months",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3,
+        4
+      ]
+    ],
+    "base_count": 4,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor",
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 0 ＋ 小 4",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": true,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "execution",
+    "zh": "四张执行牌阵",
+    "en": "Execution and review",
+    "level": "beginner",
+    "source_page": 28,
+    "version": "ppt-v2.0",
+    "positions": [
+      "当前核心",
+      "执行难点",
+      "减负行动",
+      "复盘信号"
+    ],
+    "positions_en": [
+      "Core",
+      "Execution challenge",
+      "Reduce load",
+      "Review signal"
+    ],
+    "quota_major": [
+      1
+    ],
+    "layout": "line",
+    "desc": "多任务、兼职、合作执行与生活习惯",
+    "desc_en": "Multiple commitments, execution and habits",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3,
+        4
+      ]
+    ],
+    "base_count": 4,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 1 ＋ 小 3",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "cross",
+    "zh": "五张十字",
+    "en": "Five-card cross",
+    "level": "beginner",
+    "source_page": 29,
+    "version": "ppt-v2.0",
+    "positions": [
+      "当前核心",
+      "有利因素",
+      "主要阻碍",
+      "行动建议",
+      "综合走向"
+    ],
+    "positions_en": [
+      "Core",
+      "Support",
+      "Challenge",
+      "Action",
+      "Conditional outlook"
+    ],
+    "quota_major": [
+      1,
+      5
+    ],
+    "layout": "cross",
+    "desc": "单一议题的条件、行动与整合",
+    "desc_en": "Conditions, actions and synthesis for one topic",
+    "reading_groups": [
+      [
+        1
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "base_count": 5,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 2 ＋ 小 3",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        2,
+        3
+      ]
+    ]
+  },
+  {
+    "id": "career",
+    "zh": "五张事业",
+    "en": "Career exploration",
+    "level": "beginner",
+    "source_page": 31,
+    "version": "ppt-v2.0",
+    "positions": [
+      "职业主题",
+      "可用资源",
+      "现实阻力",
+      "准备行动",
+      "发展主题"
+    ],
+    "positions_en": [
+      "Career theme",
+      "Resources",
+      "Constraints",
+      "Preparation",
+      "Development theme"
+    ],
+    "quota_major": [
+      1,
+      5
+    ],
+    "layout": "line",
+    "desc": "求职准备、职业成长、转型与合作",
+    "desc_en": "Job preparation, career development and transitions",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "base_count": 5,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 2 ＋ 小 3",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        4,
+        1
+      ],
+      [
+        5,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "relationship_action",
+    "zh": "五张关系行动",
+    "en": "Relationship actions",
+    "level": "beginner",
+    "source_page": 32,
+    "version": "ppt-v2.0",
+    "positions": [
+      "我的模式",
+      "连接资源",
+      "现实阻碍",
+      "可做行动",
+      "观察信号"
+    ],
+    "positions_en": [
+      "My patterns",
+      "Connection resources",
+      "Challenges",
+      "Action",
+      "Observation"
+    ],
+    "quota_major": [
+      1
+    ],
+    "layout": "quincunx",
+    "desc": "脱单、建立连接、关系准备与自身反思",
+    "desc_en": "New connections, readiness and self-reflection",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    ],
+    "base_count": 5,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 1 ＋ 小 4",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        2,
+        2
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        3,
+        3
+      ]
+    ]
+  },
+  {
+    "id": "relationship_six",
+    "zh": "六张关系反思",
+    "en": "Six-card relationship",
+    "level": "intermediate",
+    "source_page": 35,
+    "version": "ppt-v2.0",
+    "positions": [
+      "我的需要",
+      "对方已表达的需要",
+      "我的投入",
+      "可观察回应",
+      "当前分歧",
+      "沟通与边界"
+    ],
+    "positions_en": [
+      "My needs",
+      "Their expressed needs",
+      "My contribution",
+      "Observed response",
+      "Differences",
+      "Communication and boundaries"
+    ],
+    "quota_major": [
+      1,
+      2
+    ],
+    "layout": "pairs",
+    "desc": "对照已经表达的需要和可观察的互动",
+    "desc_en": "Compare expressed needs and observed interaction",
+    "reading_groups": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        5,
+        6
+      ]
+    ],
+    "base_count": 6,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 2 ＋ 小 4",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ]
+  },
+  {
+    "id": "choice",
+    "zh": "七张二选一",
+    "en": "Two paths",
+    "level": "intermediate",
+    "source_page": 37,
+    "version": "ppt-v2.0",
+    "positions": [
+      "共同起点",
+      "A的机会",
+      "A的代价",
+      "A的走向",
+      "B的机会",
+      "B的代价",
+      "B的走向"
+    ],
+    "positions_en": [
+      "Starting point",
+      "A opportunity",
+      "A cost",
+      "A outlook",
+      "B opportunity",
+      "B cost",
+      "B outlook"
+    ],
+    "quota_major": [
+      1,
+      4,
+      7
+    ],
+    "layout": "choice",
+    "desc": "同一标准与区间下比较两个明确选项",
+    "desc_en": "Compare two defined options on equal terms",
+    "reading_groups": [
+      [
+        1
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        3,
+        6
+      ],
+      [
+        4,
+        7
+      ]
+    ],
+    "base_count": 7,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 3 ＋ 小 4",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 2,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  },
+  {
+    "id": "horseshoe",
+    "zh": "七张马蹄",
+    "en": "Horseshoe",
+    "level": "intermediate",
+    "source_page": 40,
+    "version": "ppt-v2.0",
+    "positions": [
+      "过去影响",
+      "当前核心",
+      "未留意因素",
+      "核心阻碍",
+      "外部条件",
+      "行动建议",
+      "综合走向"
+    ],
+    "positions_en": [
+      "Past influence",
+      "Present core",
+      "Unexamined factors",
+      "Challenge",
+      "External conditions",
+      "Action",
+      "Synthesis"
+    ],
+    "quota_major": [
+      2,
+      7
+    ],
+    "layout": "horseshoe",
+    "desc": "有前因后果、受多种条件影响的议题",
+    "desc_en": "A topic with history and multiple influences",
+    "reading_groups": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4,
+        5
+      ],
+      [
+        6,
+        7
+      ]
+    ],
+    "base_count": 7,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 2 ＋ 小 5",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        5,
+        3
+      ],
+      [
+        6,
+        2
+      ],
+      [
+        7,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "nine",
+    "zh": "九宫格专题",
+    "en": "Nine-card exploration",
+    "level": "intermediate",
+    "source_page": 42,
+    "version": "ppt-v2.0",
+    "positions": [
+      "处境主题",
+      "可用资源",
+      "现实阻碍",
+      "下一步行动",
+      "关键任务",
+      "所需支持",
+      "观察信号",
+      "待核实条件",
+      "调整方向"
+    ],
+    "positions_en": [
+      "Context",
+      "Resources",
+      "Constraints",
+      "Next action",
+      "Key task",
+      "Support",
+      "Signals",
+      "Facts to verify",
+      "Adjustment"
+    ],
+    "quota_major": [
+      1,
+      5,
+      9
+    ],
+    "layout": "grid",
+    "desc": "条件、行动、复盘三层联读",
+    "desc_en": "Conditions, action and review",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6
+      ],
+      [
+        7,
+        8,
+        9
+      ],
+      [
+        1,
+        4,
+        7
+      ],
+      [
+        2,
+        5,
+        8
+      ],
+      [
+        3,
+        6,
+        9
+      ]
+    ],
+    "base_count": 9,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 3 ＋ 小 6",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        3
+      ]
+    ]
+  },
+  {
+    "id": "celtic",
+    "zh": "凯尔特十字",
+    "en": "Celtic cross",
+    "level": "advanced",
+    "source_page": 47,
+    "version": "ppt-v2.0",
+    "positions": [
+      "当前处境",
+      "核心挑战",
+      "过去影响",
+      "近期走向",
+      "目标与想法",
+      "深层动机",
+      "我的作用",
+      "外部条件",
+      "希望与担心",
+      "综合走向"
+    ],
+    "positions_en": [
+      "Present situation",
+      "Core challenge",
+      "Past influence",
+      "Near-term outlook",
+      "Goals and thoughts",
+      "Deeper motivation",
+      "My role",
+      "External conditions",
+      "Hopes and fears",
+      "Synthesis"
+    ],
+    "quota_major": [
+      1,
+      5,
+      6,
+      10
+    ],
+    "layout": "celtic",
+    "desc": "多因素职业、合作、关系与人生阶段",
+    "desc_en": "Complex career, relationship and life-stage reflection",
+    "reading_groups": [
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        5,
+        6
+      ],
+      [
+        7,
+        8
+      ],
+      [
+        9,
+        10
+      ]
+    ],
+    "base_count": 10,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 4 ＋ 小 6",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [
+      2
+    ],
+    "coordinates": [
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        2,
+        3.3
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        4,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "annual",
+    "zh": "年度月份＋主题",
+    "en": "Twelve months and a theme",
+    "level": "advanced",
+    "source_page": 53,
+    "version": "ppt-v2.0",
+    "positions": [
+      "第1个月",
+      "第2个月",
+      "第3个月",
+      "第4个月",
+      "第5个月",
+      "第6个月",
+      "第7个月",
+      "第8个月",
+      "第9个月",
+      "第10个月",
+      "第11个月",
+      "第12个月",
+      "年度主题"
+    ],
+    "positions_en": [
+      "Month 1",
+      "Month 2",
+      "Month 3",
+      "Month 4",
+      "Month 5",
+      "Month 6",
+      "Month 7",
+      "Month 8",
+      "Month 9",
+      "Month 10",
+      "Month 11",
+      "Month 12",
+      "Year theme"
+    ],
+    "quota_major": [
+      13
+    ],
+    "layout": "annual",
+    "desc": "指定起始月份，逐月观察并按季度复盘",
+    "desc_en": "Choose a starting month; review by month and quarter",
+    "reading_groups": [
+      [
+        13
+      ],
+      [
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6
+      ],
+      [
+        7,
+        8,
+        9
+      ],
+      [
+        10,
+        11,
+        12
+      ]
+    ],
+    "base_count": 13,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 1 ＋ 小 12",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": true,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        4,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        4,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        4
+      ],
+      [
+        2.5,
+        1
+      ]
+    ]
+  },
+  {
+    "id": "houses",
+    "zh": "十二宫领域",
+    "en": "Twelve life areas",
+    "level": "advanced",
+    "source_page": 56,
+    "version": "ppt-v2.0",
+    "positions": [
+      "自我",
+      "个人资源",
+      "沟通学习",
+      "家与根基",
+      "创造与恋爱",
+      "日常照护",
+      "关系与合作",
+      "共同资源",
+      "拓展与学习",
+      "职业方向",
+      "社群支持",
+      "独处与反思"
+    ],
+    "positions_en": [
+      "Self",
+      "Personal resources",
+      "Communication and learning",
+      "Home",
+      "Creativity and dating",
+      "Daily care",
+      "Relationships",
+      "Shared resources",
+      "Exploration",
+      "Career",
+      "Community",
+      "Solitude and reflection"
+    ],
+    "quota_major": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "layout": "houses",
+    "desc": "十二个生活领域，不对应十二个月",
+    "desc_en": "Twelve life areas, not twelve months",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    ],
+    "base_count": 12,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major",
+      "major"
+    ],
+    "quota_label": "大 12 ＋ 小 0",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        3.5,
+        1.0
+      ],
+      [
+        4.75,
+        1.3349364905389032
+      ],
+      [
+        5.665063509461096,
+        2.25
+      ],
+      [
+        6.0,
+        3.5
+      ],
+      [
+        5.665063509461097,
+        4.75
+      ],
+      [
+        4.75,
+        5.665063509461097
+      ],
+      [
+        3.5000000000000004,
+        6.0
+      ],
+      [
+        2.250000000000001,
+        5.665063509461097
+      ],
+      [
+        1.334936490538904,
+        4.750000000000001
+      ],
+      [
+        1.0,
+        3.5000000000000004
+      ],
+      [
+        1.3349364905389036,
+        2.25
+      ],
+      [
+        2.249999999999999,
+        1.334936490538904
+      ]
+    ]
+  },
+  {
+    "id": "three_paths",
+    "zh": "三路线比较",
+    "en": "Three paths",
+    "level": "advanced",
+    "source_page": 59,
+    "version": "ppt-v2.0",
+    "positions": [
+      "共同起点",
+      "A机会",
+      "A代价",
+      "A行动",
+      "A综合",
+      "B机会",
+      "B代价",
+      "B行动",
+      "B综合",
+      "C机会",
+      "C代价",
+      "C行动",
+      "C综合"
+    ],
+    "positions_en": [
+      "Starting point",
+      "A opportunity",
+      "A cost",
+      "A action",
+      "A synthesis",
+      "B opportunity",
+      "B cost",
+      "B action",
+      "B synthesis",
+      "C opportunity",
+      "C cost",
+      "C action",
+      "C synthesis"
+    ],
+    "quota_major": [
+      1,
+      5,
+      9,
+      13
+    ],
+    "layout": "three_paths",
+    "desc": "三个真实可区分的方案，对照机会与代价",
+    "desc_en": "Compare three distinct options and their requirements",
+    "reading_groups": [
+      [
+        1
+      ],
+      [
+        2,
+        6,
+        10
+      ],
+      [
+        3,
+        7,
+        11
+      ],
+      [
+        4,
+        8,
+        12
+      ],
+      [
+        5,
+        9,
+        13
+      ]
+    ],
+    "base_count": 13,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "minor",
+      "major"
+    ],
+    "quota_label": "大 4 ＋ 小 9",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 3,
+    "needs_start_month": false,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        3,
+        5
+      ]
+    ]
+  },
+  {
+    "id": "quarters",
+    "zh": "四季度规划",
+    "en": "Four-quarter planning",
+    "level": "advanced",
+    "source_page": 61,
+    "version": "ppt-v2.0",
+    "positions": [
+      "Q1主题",
+      "Q1行动",
+      "Q1限制",
+      "Q2主题",
+      "Q2行动",
+      "Q2限制",
+      "Q3主题",
+      "Q3行动",
+      "Q3限制",
+      "Q4主题",
+      "Q4行动",
+      "Q4限制"
+    ],
+    "positions_en": [
+      "Q1 theme",
+      "Q1 action",
+      "Q1 limit",
+      "Q2 theme",
+      "Q2 action",
+      "Q2 limit",
+      "Q3 theme",
+      "Q3 action",
+      "Q3 limit",
+      "Q4 theme",
+      "Q4 action",
+      "Q4 limit"
+    ],
+    "quota_major": [
+      1,
+      4,
+      7,
+      10
+    ],
+    "layout": "quarters",
+    "desc": "每季度一张主题＋两张执行牌",
+    "desc_en": "One theme and two practical cards per quarter",
+    "reading_groups": [
+      [
+        1,
+        2,
+        3
+      ],
+      [
+        4,
+        5,
+        6
+      ],
+      [
+        7,
+        8,
+        9
+      ],
+      [
+        10,
+        11,
+        12
+      ]
+    ],
+    "base_count": 12,
+    "clarifier_pool": "minor",
+    "allowed_methods": [
+      "mixed",
+      "major",
+      "minor",
+      "quota"
+    ],
+    "quota_pools": [
+      "major",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor",
+      "major",
+      "minor",
+      "minor"
+    ],
+    "quota_label": "大 4 ＋ 小 8",
+    "source": "tarot_spreads_systematic_course_92_slides.pptx",
+    "option_count": 0,
+    "needs_start_month": true,
+    "horizontal_positions": [],
+    "coordinates": [
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        4
+      ]
+    ]
+  }
+]

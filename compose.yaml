@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tarot
+      POSTGRES_USER: tarot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/init.py}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U tarot -d tarot']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://tarot:${POSTGRES_PASSWORD}@db:5432/tarot
+      APP_SECRET: ${APP_SECRET:?Run scripts/init.py}
+      SETUP_TOKEN: ${SETUP_TOKEN:?Run scripts/init.py}
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      SITE_URL: ${SITE_URL:-https://tarot.opsglobalonline.com}
+      SITE_HOSTS: ${SITE_HOSTS:-honeytime.life,www.honeytime.life,tarot.opsglobalonline.com}
+      CANONICAL_HOST: ${CANONICAL_HOST:-}
+      GUEST_AI_LIMIT: ${GUEST_AI_LIMIT:-1}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-1}
+      NOTIFY_EMAIL: ${NOTIFY_EMAIL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL: ${AI_MODEL:-}
+      AI_DAILY_BUDGET: ${AI_DAILY_BUDGET:-}
+      AI_USER_DAILY_LIMIT: ${AI_USER_DAILY_LIMIT:-}
+      AI_INPUT_PRICE: ${AI_INPUT_PRICE:-}
+      AI_OUTPUT_PRICE: ${AI_OUTPUT_PRICE:-}
+      AI_MAX_TOKENS: ${AI_MAX_TOKENS:-}
+    ports:
+      - '0.0.0.0:${APP_PORT:-8180}:8000'
+    volumes:
+      - app_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+volumes:
+  postgres_data:
+  app_data:

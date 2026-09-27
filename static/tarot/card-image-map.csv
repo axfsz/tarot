@@ -1,0 +1,79 @@
+﻿sequence,id,name_zh,name_en,printed_name_zh,image,back_image,excel_row
+1,major-00,愚者,The Fool,愚者,cards/major/00-the-fool.png,cards/back.png,6
+2,major-01,魔术师,The Magician,魔术师,cards/major/01-the-magician.png,cards/back.png,7
+3,major-02,女祭司,The High Priestess,女祭司,cards/major/02-the-high-priestess.png,cards/back.png,8
+4,major-03,皇后,The Empress,女皇,cards/major/03-the-empress.png,cards/back.png,9
+5,major-04,皇帝,The Emperor,国王,cards/major/04-the-emperor.png,cards/back.png,10
+6,major-05,教皇,The Hierophant,教皇,cards/major/05-the-hierophant.png,cards/back.png,11
+7,major-06,恋人,The Lovers,恋人,cards/major/06-the-lovers.png,cards/back.png,12
+8,major-07,战车,The Chariot,战车,cards/major/07-the-chariot.png,cards/back.png,13
+9,major-08,力量,Strength,力量,cards/major/08-strength.png,cards/back.png,14
+10,major-09,隐者,The Hermit,隐者,cards/major/09-the-hermit.png,cards/back.png,15
+11,major-10,命运之轮,Wheel of Fortune,命运之轮,cards/major/10-wheel-of-fortune.png,cards/back.png,16
+12,major-11,正义,Justice,正义,cards/major/11-justice.png,cards/back.png,17
+13,major-12,倒吊人,The Hanged Man,倒吊男,cards/major/12-the-hanged-man.png,cards/back.png,18
+14,major-13,死神,Death,死神,cards/major/13-death.png,cards/back.png,19
+15,major-14,节制,Temperance,节制,cards/major/14-temperance.png,cards/back.png,20
+16,major-15,恶魔,The Devil,恶魔,cards/major/15-the-devil.png,cards/back.png,21
+17,major-16,高塔,The Tower,高塔,cards/major/16-the-tower.png,cards/back.png,22
+18,major-17,星星,The Star,星星,cards/major/17-the-star.png,cards/back.png,23
+19,major-18,月亮,The Moon,月亮,cards/major/18-the-moon.png,cards/back.png,24
+20,major-19,太阳,The Sun,太阳,cards/major/19-the-sun.png,cards/back.png,25
+21,major-20,审判,Judgement,审判,cards/major/20-judgement.png,cards/back.png,26
+22,major-21,世界,The World,世界,cards/major/21-the-world.png,cards/back.png,27
+23,wands-01,权杖王牌,Ace of Wands,权杖一,cards/wands/01-ace.png,cards/back.png,28
+24,wands-02,权杖二,Two of Wands,权杖二,cards/wands/02-two.png,cards/back.png,29
+25,wands-03,权杖三,Three of Wands,权杖三,cards/wands/03-three.png,cards/back.png,30
+26,wands-04,权杖四,Four of Wands,权杖四,cards/wands/04-four.png,cards/back.png,31
+27,wands-05,权杖五,Five of Wands,权杖五,cards/wands/05-five.png,cards/back.png,32
+28,wands-06,权杖六,Six of Wands,权杖六,cards/wands/06-six.png,cards/back.png,33
+29,wands-07,权杖七,Seven of Wands,权杖七,cards/wands/07-seven.png,cards/back.png,34
+30,wands-08,权杖八,Eight of Wands,权杖八,cards/wands/08-eight.png,cards/back.png,35
+31,wands-09,权杖九,Nine of Wands,权杖九,cards/wands/09-nine.png,cards/back.png,36
+32,wands-10,权杖十,Ten of Wands,权杖十,cards/wands/10-ten.png,cards/back.png,37
+33,wands-11,权杖侍从,Page of Wands,权杖侍从,cards/wands/11-page.png,cards/back.png,38
+34,wands-12,权杖骑士,Knight of Wands,权杖骑士,cards/wands/12-knight.png,cards/back.png,39
+35,wands-13,权杖王后,Queen of Wands,权杖皇后,cards/wands/13-queen.png,cards/back.png,40
+36,wands-14,权杖国王,King of Wands,权杖国王,cards/wands/14-king.png,cards/back.png,41
+37,cups-01,圣杯王牌,Ace of Cups,圣杯一,cards/cups/01-ace.png,cards/back.png,42
+38,cups-02,圣杯二,Two of Cups,圣杯二,cards/cups/02-two.png,cards/back.png,43
+39,cups-03,圣杯三,Three of Cups,圣杯三,cards/cups/03-three.png,cards/back.png,44
+40,cups-04,圣杯四,Four of Cups,圣杯四,cards/cups/04-four.png,cards/back.png,45
+41,cups-05,圣杯五,Five of Cups,圣杯五,cards/cups/05-five.png,cards/back.png,46
+42,cups-06,圣杯六,Six of Cups,圣杯六,cards/cups/06-six.png,cards/back.png,47
+43,cups-07,圣杯七,Seven of Cups,圣杯七,cards/cups/07-seven.png,cards/back.png,48
+44,cups-08,圣杯八,Eight of Cups,圣杯八,cards/cups/08-eight.png,cards/back.png,49
+45,cups-09,圣杯九,Nine of Cups,圣杯九,cards/cups/09-nine.png,cards/back.png,50
+46,cups-10,圣杯十,Ten of Cups,圣杯十,cards/cups/10-ten.png,cards/back.png,51
+47,cups-11,圣杯侍从,Page of Cups,圣杯侍从,cards/cups/11-page.png,cards/back.png,52
+48,cups-12,圣杯骑士,Knight of Cups,圣杯骑士,cards/cups/12-knight.png,cards/back.png,53
+49,cups-13,圣杯王后,Queen of Cups,圣杯皇后,cards/cups/13-queen.png,cards/back.png,54
+50,cups-14,圣杯国王,King of Cups,圣杯国王,cards/cups/14-king.png,cards/back.png,55
+51,swords-01,宝剑王牌,Ace of Swords,宝剑一,cards/swords/01-ace.png,cards/back.png,56
+52,swords-02,宝剑二,Two of Swords,宝剑二,cards/swords/02-two.png,cards/back.png,57
+53,swords-03,宝剑三,Three of Swords,宝剑三,cards/swords/03-three.png,cards/back.png,58
+54,swords-04,宝剑四,Four of Swords,宝剑四,cards/swords/04-four.png,cards/back.png,59
+55,swords-05,宝剑五,Five of Swords,宝剑五,cards/swords/05-five.png,cards/back.png,60
+56,swords-06,宝剑六,Six of Swords,宝剑六,cards/swords/06-six.png,cards/back.png,61
+57,swords-07,宝剑七,Seven of Swords,宝剑七,cards/swords/07-seven.png,cards/back.png,62
+58,swords-08,宝剑八,Eight of Swords,宝剑八,cards/swords/08-eight.png,cards/back.png,63
+59,swords-09,宝剑九,Nine of Swords,宝剑九,cards/swords/09-nine.png,cards/back.png,64
+60,swords-10,宝剑十,Ten of Swords,宝剑十,cards/swords/10-ten.png,cards/back.png,65
+61,swords-11,宝剑侍从,Page of Swords,宝剑侍从,cards/swords/11-page.png,cards/back.png,66
+62,swords-12,宝剑骑士,Knight of Swords,宝剑骑士,cards/swords/12-knight.png,cards/back.png,67
+63,swords-13,宝剑王后,Queen of Swords,宝剑皇后,cards/swords/13-queen.png,cards/back.png,68
+64,swords-14,宝剑国王,King of Swords,宝剑国王,cards/swords/14-king.png,cards/back.png,69
+65,pentacles-01,星币王牌,Ace of Pentacles,钱币一,cards/pentacles/01-ace.png,cards/back.png,70
+66,pentacles-02,星币二,Two of Pentacles,钱币二,cards/pentacles/02-two.png,cards/back.png,71
+67,pentacles-03,星币三,Three of Pentacles,钱币三,cards/pentacles/03-three.png,cards/back.png,72
+68,pentacles-04,星币四,Four of Pentacles,钱币四,cards/pentacles/04-four.png,cards/back.png,73
+69,pentacles-05,星币五,Five of Pentacles,钱币五,cards/pentacles/05-five.png,cards/back.png,74
+70,pentacles-06,星币六,Six of Pentacles,钱币六,cards/pentacles/06-six.png,cards/back.png,75
+71,pentacles-07,星币七,Seven of Pentacles,钱币七,cards/pentacles/07-seven.png,cards/back.png,76
+72,pentacles-08,星币八,Eight of Pentacles,钱币八,cards/pentacles/08-eight.png,cards/back.png,77
+73,pentacles-09,星币九,Nine of Pentacles,钱币九,cards/pentacles/09-nine.png,cards/back.png,78
+74,pentacles-10,星币十,Ten of Pentacles,钱币十,cards/pentacles/10-ten.png,cards/back.png,79
+75,pentacles-11,星币侍从,Page of Pentacles,钱币侍从,cards/pentacles/11-page.png,cards/back.png,80
+76,pentacles-12,星币骑士,Knight of Pentacles,钱币骑士,cards/pentacles/12-knight.png,cards/back.png,81
+77,pentacles-13,星币王后,Queen of Pentacles,钱币皇后,cards/pentacles/13-queen.png,cards/back.png,82
+78,pentacles-14,星币国王,King of Pentacles,钱币国王,cards/pentacles/14-king.png,cards/back.png,83

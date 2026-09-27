@@ -1,0 +1,23 @@
+{
+  "front_cards": 78,
+  "shared_card_backs": 1,
+  "standalone_png_files": 79,
+  "embedded_pictures": 156,
+  "unique_embedded_media": 79,
+  "suit_counts": {
+    "major": 22,
+    "wands": 14,
+    "cups": 14,
+    "swords": 14,
+    "pentacles": 14
+  },
+  "original_78_rows_and_9_columns_preserved": true,
+  "all_78_front_images_match_expected_rows": true,
+  "all_78_back_images_share_identical_data": true,
+  "duplicate_front_images": 0,
+  "missing_images": 0,
+  "formulas": 0,
+  "upscaled": false,
+  "xlsx_bytes": 15533783,
+  "source_workbook": "韦特塔罗78张牌完整速查表.xlsx"
+}
