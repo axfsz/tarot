@@ -1,4 +1,4 @@
-import os, json, secrets, hashlib, time, threading, ipaddress, socket, re, gzip, smtplib, ssl
+import os, json, secrets, hashlib, hmac, time, threading, ipaddress, socket, re, gzip, smtplib, ssl
 from email.message import EmailMessage
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -14,8 +14,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 from sqlalchemy import create_engine, Table, Column, String, Text, MetaData, select, insert, update, delete, func
 from catalog import CARDS, SPREADS, DEFAULTS
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 import tarot_engine as tarot
+import geo
 
 DATA=Path(os.getenv('DATA_DIR','./data')); DATA.mkdir(parents=True,exist_ok=True)
 SECRET=os.getenv('APP_SECRET')
@@ -32,6 +33,8 @@ URL=unseal(configfile.read_text())['url'] if configfile.exists() else os.getenv(
 engine=create_engine(URL,pool_pre_ping=True,**({'connect_args':{'check_same_thread':False,'timeout':30}} if URL.startswith('sqlite') else {}))
 meta=MetaData()
 records=Table('records',meta,Column('id',String(80),primary_key=True),Column('kind',String(40),index=True),Column('owner',String(80),index=True),Column('payload',Text,nullable=False))
+import publisher.core as pubcore
+jobs=pubcore.table(meta)  # scheduled posting queue (v0.8.1), shared with the publisher container
 meta.create_all(engine)
 lock=threading.RLock()
 def get(c,id):
@@ -247,8 +250,8 @@ def notify_admin(subject,text):
 EMAIL_RE=r'[^\s@]+@[^\s@]+\.[^\s@]+'
 
 # ---------- first-party analytics (no cookies, no third parties) ----------
-EVENTS={'page_view','quick_ask','daily_card','signup_view','signup_success','login_success','guest_created','reading_created','draw_completed','ai_requested','ai_completed','ai_failed','budget_hit','transfer_clicked','booking_submitted','booking_confirmed','cta_human','faq_open','case_consent','case_published','case_withdrawn','case_strip_view','case_open','case_to_reading','case_to_human','prompt_chip','case_like','case_comment','case_share','site_share'}
-CLIENT_EVENTS={'page_view','quick_ask','daily_card','signup_view','transfer_clicked','cta_human','faq_open','case_strip_view','case_open','case_to_reading','case_to_human','prompt_chip','case_share','site_share'}
+EVENTS={'page_view','quick_ask','daily_card','signup_view','signup_success','login_success','guest_created','reading_created','draw_completed','ai_requested','ai_completed','ai_failed','budget_hit','transfer_clicked','booking_submitted','booking_confirmed','cta_human','faq_open','case_consent','case_published','case_withdrawn','case_strip_view','case_open','case_to_reading','case_to_human','prompt_chip','case_like','case_comment','case_share','site_share','card_to_reading'}
+CLIENT_EVENTS={'page_view','quick_ask','daily_card','signup_view','transfer_clicked','cta_human','faq_open','case_strip_view','case_open','case_to_reading','case_to_human','prompt_chip','case_share','site_share','card_to_reading'}
 def stats_day(c=None,s=None):
  s=s or settings(c);return datetime.now(ZoneInfo(s['timezone'])).strftime('%Y-%m-%d')
 def track(c,name,page=None,day=None):
@@ -260,13 +263,26 @@ def track(c,name,page=None,day=None):
 def visitor_hash(day):
  # Daily-rotating salted hash: counts unique visitors without storing IPs or cookies.
  return hashlib.sha256(f"{day}|{SECRET}|{request.remote_addr}|{request.headers.get('User-Agent','')[:200]}".encode()).hexdigest()[:20]
-def mark(c,prefix,day):
- # prefix: visit (any page view), cv (saw case examples), rv (started a reading).
+MARKS=('visit','cv','rv','su','bk')
+def mark(c,prefix,day,data=None):
+ # prefix: visit (any page view), cv (saw case examples), rv (started a reading), su (signed up), bk (booked).
+ # A visit mark keeps coarse, non-identifying attributes (source, country from the browser time zone, device).
  key=f'{prefix}:{day}:{visitor_hash(day)}'
- if get(c,key) is None:put(c,key,'visit','system',{})
-def visit(c,day):mark(c,'visit',day)
+ if get(c,key) is None:put(c,key,'visit','system',data or {});return True
+ return False
+def visit(c,day,data=None):return mark(c,'visit',day,data)
+def visit_attrs(d):
+ # Everything comes from the browser (time zone, language, referrer, UTM) or the User-Agent. No IP lookup.
+ ua=request.headers.get('User-Agent','')
+ utm=d.get('utm') if isinstance(d.get('utm'),dict) else {}
+ ch,grp,ref=geo.classify(str(d.get('ref',''))[:500],utm.get('source',''),utm.get('medium',''),ua,SITE_HOSTS|{(request.host or '').split(':')[0].lower()})
+ tz=geo.clean_tz(d.get('tz'));land=str(d.get('path',''))[:80]
+ return dict(ch=ch,grp=grp,ref=ref[:80],camp=geo.clean_token(utm.get('campaign','')),cc=geo.country_of(tz),tz=tz,lang=geo.clean_lang(d.get('lang')),
+  dev=geo.device_of(ua),os=geo.os_of(ua),land=land if re.fullmatch(r'/[A-Za-z0-9/_\-]*',land) else '')
 def count_marks(c,prefix,day):
  return {x[0].rsplit(':',1)[1] for x in c.execute(select(records.c.id).where(records.c.kind=='visit').where(records.c.id.like(f'{prefix}:{day}:%'))).all()}
+def visit_rows(c,day):
+ return {x[0].rsplit(':',1)[1]:json.loads(x[1]) for x in c.execute(select(records.c.id,records.c.payload).where(records.c.kind=='visit').where(records.c.id.like(f'visit:{day}:%'))).all()}
 def page_lang():
  return 'en' if request.args.get('lang')=='en' else 'zh'
 def public_settings(s):
@@ -386,13 +402,21 @@ def format_report(text):
   elif all(re.match(r'^[-*•]\s+',l) for l in lines):out.append('<ul>'+''.join('<li>'+inline_md(re.sub(r'^[-*•]\s+','',l))+'</li>' for l in lines)+'</ul>')
   else:out.append('<p>'+'<br>'.join(inline_md(l) for l in lines)+'</p>')
  return Markup(''.join(out))
+def page_meta(page,lang,s,seo):
+ # Default title/description for a public page, with the studio's SEO overrides applied.
+ meta=PAGES.get(page,PAGES['home'])
+ title,description=(x.format(bz=s['brand_zh'],be=s['brand_en']) for x in meta[lang])
+ o=(seo.get('pages') or {}).get(page) or {}
+ return (o.get(lang+'_title') or title),(o.get(lang+'_desc') or description)
 def page_response(page,status=200,**extra):
  lang=page_lang();meta=PAGES.get(page,PAGES['home'])
- with engine.connect() as c:s=settings(c);strip=strip_cases(c,s) if page=='home' else []
- title,description=(x.format(bz=s['brand_zh'],be=s['brand_en']) for x in meta[lang])
+ with engine.connect() as c:s=settings(c);strip=strip_cases(c,s) if page=='home' else [];seo=seo_config(c)
+ title,description=page_meta(page,lang,s,seo)
  title=extra.pop('title',title);description=extra.pop('description',description)
  base=site_url();path=extra.pop('path',meta['path']);canonical=base+path+('?lang=en' if lang=='en' else '')
- html=render_template('index.html',page=page,lang=lang,title=title,description=description,canonical=canonical,site_url=base,path=path,asset_v=ASSET_V,catalog_v=CATALOG_V,s=s,pub=public_settings(s),faq=FAQ,faq_ld=[{'@type':'Question','name':f['q_'+lang],'acceptedAnswer':{'@type':'Answer','text':f['a_'+lang]}} for f in FAQ],cards=CARDS,spreads=SPREADS,strip=strip,topics=TOPICS,sources=SOURCES,noindex=status!=200 or page in ('admin','setup'),**extra)
+ noindex=status!=200 or page in ('admin','setup') or extra.pop('noindex',False);has_en=extra.pop('has_en',True)
+ og_image=seo.get('og_image') or base+'/static/og-cover.jpg'
+ html=render_template('index.html',page=page,lang=lang,title=title,description=description,canonical=canonical,site_url=base,path=path,asset_v=ASSET_V,catalog_v=CATALOG_V,s=s,pub=public_settings(s),faq=FAQ,faq_ld=[{'@type':'Question','name':f['q_'+lang],'acceptedAnswer':{'@type':'Answer','text':f['a_'+lang]}} for f in FAQ],cards=CARDS,card_slugs=CARD_SLUG,spreads=SPREADS,strip=strip,topics=TOPICS,sources=SOURCES,noindex=noindex,has_en=has_en,verify=seo.get('verify') or {},og_image=og_image,**extra)
  return Response(html,status=status,mimetype='text/html')
 @app.get('/')
 def index():return page_response('home')
@@ -433,6 +457,13 @@ def sitemap():
   urls.append(f'<url><loc>{loc}</loc>{alt}<priority>{pr}</priority></url><url><loc>{loc}?lang=en</loc>{alt}<priority>{pr}</priority></url>')
  with engine.connect() as c:
   for x in published_cases(c):urls.append(f"<url><loc>{site_url()}/cases/{x['slug']}</loc><lastmod>{(x.get('published_at') or now())[:10]}</lastmod><priority>0.6</priority></url>")
+  cs=seo_config(c).get('cards') or {}
+ for card in CARDS:
+  slug=CARD_SLUG[card['id']];o=cs.get(slug) or {};loc=f'{site_url()}/learn/{slug}';mod=f"<lastmod>{o['updated'][:10]}</lastmod>" if o.get('updated') else ''
+  if card_has_en(o):
+   alt=f'<xhtml:link rel="alternate" hreflang="zh-Hans" href="{loc}"/><xhtml:link rel="alternate" hreflang="en" href="{loc}?lang=en"/><xhtml:link rel="alternate" hreflang="x-default" href="{loc}"/>'
+   urls.append(f'<url><loc>{loc}</loc>{mod}{alt}<priority>0.7</priority></url><url><loc>{loc}?lang=en</loc>{mod}{alt}<priority>0.7</priority></url>')
+  else:urls.append(f'<url><loc>{loc}</loc>{mod}<priority>0.7</priority></url>')
  xml='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">'+''.join(urls)+'</urlset>'
  return Response(xml,mimetype='application/xml')
 @app.get('/manifest.webmanifest')
@@ -491,7 +522,7 @@ def register():
  with lock,engine.begin() as c:
   if get(c,'user:'+u['id']):raise Problem('Username unavailable / 用户名不可用',409)
   if u['email'] and any(x.get('email')==u['email'] for x in rows(c,'user')):raise Problem('Email already used / 该邮箱已绑定其他账号',409)
-  put(c,'user:'+u['id'],'user',u['id'],u);moved=adopt_guest(c,session.get('uid',''),u['id']);track(c,'signup_success')
+  put(c,'user:'+u['id'],'user',u['id'],u);moved=adopt_guest(c,session.get('uid',''),u['id']);track(c,'signup_success');mark(c,'su',stats_day(c))
  start_session(u);return jsonify(ok=True,moved=moved)
 # Compare against a real hash even for unknown users so response time does not
 # reveal which usernames exist.
@@ -541,10 +572,11 @@ def reset_password():
 def events():
  d=body();name=textval(d,'name',40);page=textval(d,'page',40)
  if name not in CLIENT_EVENTS:raise Problem('Unknown event')
+ if geo.is_bot(request.headers.get('User-Agent','')):return jsonify(ok=True,skipped='bot')
  with lock,engine.begin() as c:
   if not throttle(c,'events:'+request.remote_addr,300):return jsonify(ok=False),429
   day=stats_day(c);track(c,name,page if name=='page_view' else None,day)
-  if name=='page_view':visit(c,day)
+  if name=='page_view':visit(c,day,visit_attrs(d))
   if name in ('case_strip_view','case_open'):mark(c,'cv',day)
  return jsonify(ok=True)
 @app.post('/api/logout')
@@ -702,7 +734,7 @@ def booking(u):
   if reader_id and not reader:raise Problem('Reader unavailable / 塔罗师不可选')
   reader_snapshot={k:reader.get(k,'') for k in ['id','zh','en','bio_zh','bio_en','languages','avatar']} if reader else {}
   id='booking:'+secrets.token_hex(12);b=dict(id=id,owner=u['id'],reading=r['id'],package=pkg,reader=reader_snapshot,contacts=contacts,channel='onsite',contact='',date=date,time_slot=slot,preferred=date+' '+slot,timezone=tz,language=textval(d,'language',30),status='requested',created=now(),report='',scheduled='',paid=False,charge=bool(s['billing'] and s['charge_human']),currency=s['currency'])
-  put(c,id,'booking',u['id'],b);track(c,'booking_submitted')
+  put(c,id,'booking',u['id'],b);track(c,'booking_submitted');mark(c,'bk',stats_day(c,s))
  when=f"{date} {slot} ({tz})";brand=s['brand_zh']
  send_mail(contacts['email'],f"{brand} · 已收到你的预约申请 / Booking request received",f"你好 {u['username']}，\n\n已收到你的{pkg['zh']}预约申请，期望时间 {when}。工作室确认后会再通知你，预约编号：{id}\n\nWe received your {pkg['en']} request for {when}. We'll email you once the studio confirms. Reference: {id}")
  notify_admin(f"新预约 / New booking: {pkg['zh']} {when}",f"用户 {u['username']} 提交了预约 {id}\n期望时间：{when}\n联系方式：{', '.join(k+': '+v for k,v in contacts.items() if v)}\n后台：{site_url()}/admin")
@@ -868,7 +900,8 @@ def edit_case(u,slug):
    if flags['banned']:raise Problem('Contains topics that are never published: '+', '.join(flags['banned'])+' / 含不可公开的主题',409)
    if not x['question'] or not x['summary'] or not x['report']:raise Problem('Question, summary and reading are required / 问题、摘要和解读都必须填写')
    if not x['confirmed']:raise Problem('Confirm that no personal details remain / 请先确认已不含个人身份信息',409)
-   if x['status']!='published':x['published_at']=now();track(c,'case_published')
+   fresh=x['status']!='published'
+   if fresh:x['published_at']=now();track(c,'case_published')
    x['status']='published'
   elif action=='hide':x.update(status='hidden',pinned=False)
   elif action in ('pin','unpin'):
@@ -878,6 +911,8 @@ def edit_case(u,slug):
    x['pinned']=action=='pin'
   elif action!='save':raise Problem('Invalid action')
   put(c,x['id'],'case',x['owner'],x);audit(c,u['id'],'case.'+action,x['id'])
+  if action=='publish' and fresh:indexnow(c,[f"{site_url()}/cases/{x['slug']}",site_url()+'/cases'],'case-published')
+ if action=='publish' and fresh:threading.Thread(target=auto_case_drafts,args=(slug,site_url()),daemon=True).start()
  return jsonify(case_admin(x))
 @app.get('/api/admin/settings')
 @auth(True)
@@ -949,19 +984,49 @@ def test_model(u):
 @auth(True)
 def admin_records(u):
  with engine.begin() as c:return jsonify(bookings=newest(rows(c,'booking')),orders=newest(rows(c,'order')),audit=newest(rows(c,'audit'))[:100],readings=newest([public_read(r) for r in rows(c,'reading')]))
+def _intarg(name,default,lo,hi):
+ try:return max(lo,min(int(request.args.get(name,default)),hi))
+ except ValueError:return default
+def audience(c,days):
+ # Visitor-day breakdowns over the given days: where people come from and what they go on to do.
+ buckets={k:{} for k in ('channels','groups','countries','timezones','devices','os','langs','referrers','campaigns','landings')}
+ total=dict(visitors=0,starters=0,signups=0,bookings=0,known_region=0)
+ def add(dim,key,flags,extra=None):
+  b=buckets[dim].setdefault(key or '',dict(key=key or '',visitors=0,starters=0,signups=0,bookings=0,**(extra or {})))
+  b['visitors']+=1;b['starters']+=flags[0];b['signups']+=flags[1];b['bookings']+=flags[2]
+ for day in days:
+  vis=visit_rows(c,day);rv=count_marks(c,'rv',day);su=count_marks(c,'su',day);bk=count_marks(c,'bk',day)
+  for h,a in vis.items():
+   f=(int(h in rv),int(h in su),int(h in bk))
+   total['visitors']+=1;total['starters']+=f[0];total['signups']+=f[1];total['bookings']+=f[2];total['known_region']+=int(bool(a.get('cc')))
+   ch=a.get('ch') or ('direct' if a else '');grp=a.get('grp') or ('direct' if a else '')
+   add('channels',ch,f,dict(group=grp));add('groups',grp,f);add('countries',a.get('cc',''),f);add('timezones',a.get('tz',''),f)
+   add('devices',a.get('dev',''),f);add('os',a.get('os',''),f);add('langs',a.get('lang',''),f)
+   if a.get('ref'):add('referrers',a['ref'],f)
+   if a.get('camp'):add('campaigns',a['camp'],f,dict(source=ch))
+   if a.get('land'):add('landings',a['land'],f)
+ out={}
+ for dim,b in buckets.items():
+  items=sorted(b.values(),key=lambda x:(-x['visitors'],x['key']))[:20]
+  for x in items:
+   if dim=='countries':x['zh'],x['en']=geo.country_name(x['key'],'zh'),geo.country_name(x['key'],'en')
+   elif dim=='channels':n=geo.CHANNEL_NAMES.get(x['key'],(x['key'] or '未记录',x['key'] or 'Not recorded'));x['zh'],x['en']=n;g=geo.GROUP_NAMES.get(x['group'],('',''));x['group_zh'],x['group_en']=g
+   elif dim=='groups':x['zh'],x['en']=geo.GROUP_NAMES.get(x['key'],('未记录','Not recorded'))
+  out[dim]=items
+ out['total']=total;return out
 @app.get('/api/admin/stats')
 @auth(True)
 def admin_stats(u):
- try:days=max(1,min(int(request.args.get('days','14')),90))
- except ValueError:days=14
+ days=_intarg('days',14,1,180);span=_intarg('range',7,1,90)
  with engine.begin() as c:
-  s=settings(c);today=datetime.now(ZoneInfo(s['timezone'])).date();out=[]
+  s=settings(c);today=datetime.fromisoformat(stats_day(c,s)).date();out=[]
   for i in range(days):
    day=(today-timedelta(days=i)).isoformat();r=get(c,'stats:'+day) or dict(day=day,events={},pages={})
    vis=count_marks(c,'visit',day);cv=count_marks(c,'cv',day);rv=count_marks(c,'rv',day)
    r['visitors']=len(vis);r['case_viewers']=len(cv);r['case_viewer_starts']=len(cv&rv);r['starters']=len(rv)
    out.append(r)
- return jsonify(days=out)
+  aud=audience(c,[x['day'] for x in out[:span]])
+ return jsonify(days=out,range=span,audience=aud,timezone=s['timezone'])
 @app.post('/api/admin/bookings/<id>')
 @auth(True)
 def manage_booking(u,id):
@@ -1100,21 +1165,636 @@ def run_task(id):
     live.update(status='failed',task='failed',partial=out,error='Generation incomplete; original cards are saved. Retry or contact studio. / 生成未完成，原牌已保存，请重试或联系工作室。');put(c,id,'reading',live['owner'],live);track(c,'ai_failed')
     # Unknown provider usage remains reserved conservatively; admin sees budget ledger.
 
+# ================= v0.8: SEO management, card pages, marketing =================
+def _slugify(v):return re.sub(r'[^a-z0-9]+','-',v.lower()).strip('-')
+CARD_SLUG={c['id']:_slugify(c['en']) for c in CARDS}
+SLUG_CARD={v:CARDS[k] for k,v in CARD_SLUG.items()}
+assert len(SLUG_CARD)==len(CARDS),'card slugs must be unique'
+SUITS={'major':('大阿卡纳','Major Arcana'),'wands':('权杖','Wands'),'cups':('圣杯','Cups'),'swords':('宝剑','Swords'),'pentacles':('星币','Pentacles')}
+VERIFY_KEYS={'google':'google-site-verification','bing':'msvalidate.01','baidu':'baidu-site-verification','yandex':'yandex-verification'}
+CARD_TEXT={'intro_zh':1500,'intro_en':2500,'theme_en':120,'upright_en':200,'reversed_en':200,'title_zh':80,'desc_zh':200,'title_en':120,'desc_en':300}
+def seo_config(c):
+ x=get(c,'seo') or {}
+ x.setdefault('verify',{});x.setdefault('pages',{});x.setdefault('cards',{});x.setdefault('og_image','');x.setdefault('indexnow',True)
+ return x
+def seo_key(c):
+ # IndexNow ownership key, created once and served at /<key>.txt.
+ x=seo_config(c)
+ if not x.get('indexnow_key'):x['indexnow_key']=secrets.token_hex(16);put(c,'seo','config','system',x)
+ return x['indexnow_key']
+def card_has_en(o):return bool((o or {}).get('intro_en'))
+def card_meta(card,lang,s,o):
+ slug=CARD_SLUG[card['id']]
+ if lang=='en':
+  title=o.get('title_en') or f"{card['en']} Tarot Card Meaning · Upright & Reversed | {s['brand_en']}"
+  desc=o.get('desc_en') or (o.get('intro_en') or f"{card['en']} tarot card meaning: {o.get('theme_en') or card['key_en']}. Upright: {o.get('upright_en') or card['key_en']}. Reversed: {o.get('reversed_en') or '—'}.")[:155]
+ else:
+  title=o.get('title_zh') or f"{card['zh']}塔罗牌含义 · {card['en']} 正位与逆位解读 | {s['brand_zh']}"
+  desc=o.get('desc_zh') or f"{card['zh']}（{card['en']}）塔罗牌义：{card['theme']}。正位：{card['upright']}。逆位：{card['reversed_keywords']}。"[:120]
+ return title,desc,slug
+@app.get('/learn/<slug>')
+def card_page(slug):
+ card=SLUG_CARD.get(slug)
+ if not card:abort(404)
+ lang=page_lang()
+ with engine.connect() as c:s=settings(c);o=(seo_config(c)['cards'].get(slug) or {})
+ title,desc,_=card_meta(card,lang,s,o)
+ same=[x for x in CARDS if x['suit']==card['suit']];i=same.index(card)
+ nav=dict(prev=same[i-1] if i>0 else None,next=same[i+1] if i<len(same)-1 else None)
+ view=dict(card,slug=slug,suit_zh=SUITS[card['suit']][0],suit_en=SUITS[card['suit']][1],intro_zh=o.get('intro_zh',''),intro_en=o.get('intro_en',''),theme_en=o.get('theme_en',''),upright_en=o.get('upright_en',''),reversed_en=o.get('reversed_en',''),updated=(o.get('updated') or '')[:10])
+ # English pages are only indexed once real English copy exists (the base deck data is Chinese).
+ return page_response('card',path='/learn/'+slug,title=title,description=desc,card=view,card_nav=nav,siblings=same,has_en=card_has_en(o),noindex=lang=='en' and not card_has_en(o))
+@app.get('/<key>.txt')
+def indexnow_key_file(key):
+ if not re.fullmatch(r'[0-9a-f]{32}',key):abort(404)
+ with engine.connect() as c:x=seo_config(c)
+ if key!=x.get('indexnow_key'):abort(404)
+ return Response(key,mimetype='text/plain')
+def public_urls(c,base):
+ urls=[base+p['path'] for p in PAGES.values()]+[base+p['path']+'?lang=en' for p in PAGES.values()]
+ urls+=[f"{base}/cases/{x['slug']}" for x in published_cases(c)]
+ cs=seo_config(c)['cards']
+ for card in CARDS:
+  slug=CARD_SLUG[card['id']];urls.append(f'{base}/learn/{slug}')
+  if card_has_en(cs.get(slug)):urls.append(f'{base}/learn/{slug}?lang=en')
+ return urls
+def seo_log(entry):
+ with lock,engine.begin() as c:
+  log=get(c,'seo:log') or dict(items=[]);log['items']=([dict(entry,at=now())]+log['items'])[:30];put(c,'seo:log','config','system',log)
+def _indexnow_send(host,key,urls,reason):
+ try:
+  r=httpx.post('https://api.indexnow.org/indexnow',json=dict(host=host,key=key,keyLocation=f'https://{host}/{key}.txt',urlList=urls[:10000]),timeout=20,follow_redirects=False)
+  seo_log(dict(kind='indexnow',reason=reason,count=len(urls),status=r.status_code,ok=r.status_code in (200,202)))
+ except Exception as e:seo_log(dict(kind='indexnow',reason=reason,count=len(urls),status=0,ok=False,error=str(e)[:200]))
+def indexnow(c,urls,reason,force=False):
+ # Tell Bing/Yandex/Seznam/Naver about new or changed pages (Google relies on the sitemap).
+ # Must be called inside a request: the public host is taken from the admin's own request.
+ x=seo_config(c)
+ if not urls or (not x.get('indexnow') and not force) or os.getenv('INDEXNOW','1')=='0':return False
+ host=urlparse(site_url()).hostname;here=(request.host or '').split(':')[0].lower()
+ # Local/test requests never ping search engines.
+ if not host or here in ('localhost','127.0.0.1','::1') or here.endswith('.local') or host.endswith('.local'):return False
+ threading.Thread(target=_indexnow_send,args=(host,seo_key(c),list(dict.fromkeys(urls)),reason),daemon=True).start();return True
+def title_issues(pages):
+ # One summary line per problem type instead of one line per page.
+ long_t,bad_d=[],[]
+ for row in pages:
+  for lang,(tmax,dmin,dmax) in (('zh',(32,40,120)),('en',(65,70,160))):
+   tag=row['path']+(' EN' if lang=='en' else '')
+   if len(row[lang+'_title'])>tmax:long_t.append(tag)
+   if not dmin<=len(row[lang+'_desc'])<=dmax:bad_d.append(tag)
+ out=[]
+ if long_t:out.append(dict(level='info',zh=f"{len(long_t)} 个标题偏长（中文约 32 字、英文约 65 字符以上会在搜索结果里被截断）：{'、'.join(long_t)}。重要信息放在前面即可，不必全改。",en=f"{len(long_t)} titles are long (over ~32 Chinese / ~65 English characters get truncated): {', '.join(long_t)}. Keep the key words first."))
+ if bad_d:out.append(dict(level='info',zh=f"{len(bad_d)} 个描述长度不在建议范围（中文 40–120 字，英文 70–160 字符）：{'、'.join(bad_d)}",en=f"{len(bad_d)} descriptions are outside the suggested length (70–160 characters): {', '.join(bad_d)}"))
+ return out
+def seo_overview(c):
+ s=settings(c);x=seo_config(c);seo_key(c);x=seo_config(c);base=site_url()
+ pages=[]
+ for key,p in PAGES.items():
+  row=dict(key=key,path=p['path'],override=x['pages'].get(key) or {})
+  for lang in ('zh','en'):
+   meta=PAGES[key][lang];row['default_'+lang+'_title'],row['default_'+lang+'_desc']=(v.format(bz=s['brand_zh'],be=s['brand_en']) for v in meta)
+   row[lang+'_title'],row[lang+'_desc']=page_meta(key,lang,s,x)
+  pages.append(row)
+ cards=[]
+ for card in CARDS:
+  slug=CARD_SLUG[card['id']];o=x['cards'].get(slug) or {}
+  cards.append(dict(slug=slug,zh=card['zh'],en=card['en'],suit=card['suit'],has_zh=bool(o.get('intro_zh')),has_en=card_has_en(o),ai=bool(o.get('ai')),updated=(o.get('updated') or '')[:10],**{k:o.get(k,'') for k in CARD_TEXT}))
+ checks=[]
+ hosts=sorted({h[4:] if h.startswith('www.') else h for h in SITE_HOSTS})
+ if not CANONICAL_HOST and len(hosts)>1:checks.append(dict(level='warn',zh=f"同一内容同时在 {', '.join(hosts)} 上可访问，搜索引擎会当作重复网站。在 .env 设置 CANONICAL_HOST=你的主域名（如 honeytime.life）后重启。",en=f"The same pages are served on {', '.join(hosts)}; search engines treat that as duplicate sites. Set CANONICAL_HOST=<main domain> in .env and restart."))
+ if not any((x['verify'] or {}).values()):checks.append(dict(level='info',zh='还没有填写搜索引擎验证码。如果已用 HTML 文件验证过 Google，可以忽略；Bing / 百度可在下方填写。',en='No verification codes yet. Ignore if you verified Google with an HTML file; add Bing / Baidu below.'))
+ checks+=title_issues(pages)
+ nzh=sum(1 for r in cards if r['has_zh']);nen=sum(1 for r in cards if r['has_en'])
+ if nzh<len(cards):checks.append(dict(level='info',zh=f'牌义页有独立介绍的：{nzh}/{len(cards)}。只有关键词的页面内容偏少，排名会受影响，可以用下方“AI 补全”。',en=f'Card pages with their own introduction: {nzh}/{len(cards)}. Keyword-only pages are thin; use “AI fill” below.'))
+ if nen<len(cards):checks.append(dict(level='info',zh=f'英文牌义页已开放收录：{nen}/{len(cards)}（没有英文介绍的英文页会自动设为不收录）。',en=f'English card pages open to indexing: {nen}/{len(cards)} (English pages without English copy are noindexed).'))
+ n=len(published_cases(c))
+ if n<10:checks.append(dict(level='info',zh=f'已发布算牌案例 {n} 个。每个案例都是一个可被搜索到的长尾页面，持续发布会带来自然流量。',en=f'{n} published examples. Each one is a long-tail page search engines can find.'))
+ urls=public_urls(c,base)
+ return dict(config={k:v for k,v in x.items() if k not in ('cards','pages')},pages=pages,cards=cards,checks=checks,sitemap=base+'/sitemap.xml',url_count=len(urls),
+  indexnow_url=f"{base}/{x['indexnow_key']}.txt",log=(get(c,'seo:log') or {}).get('items',[]),job=get(c,'seo:job') or {},canonical_host=CANONICAL_HOST,hosts=hosts)
+@app.get('/api/admin/seo')
+@auth(True)
+def admin_seo(u):
+ with lock,engine.begin() as c:return jsonify(seo_overview(c))
+@app.put('/api/admin/seo')
+@auth(True)
+def update_seo(u):
+ d=body();changed=[]
+ with lock,engine.begin() as c:
+  x=seo_config(c);base=site_url()
+  if isinstance(d.get('verify'),dict):
+   for k in VERIFY_KEYS:
+    v=str(d['verify'].get(k,'')).strip()
+    # People often paste the whole <meta> tag: keep only the content value.
+    m=re.search(r'content=["\']([^"\']+)["\']',v);v=(m.group(1) if m else v)[:200]
+    if v and not re.fullmatch(r'[A-Za-z0-9_\-.=+/]{4,200}',v):raise Problem(f'Invalid {k} verification code / 验证码格式无效')
+    x['verify'][k]=v
+  if 'og_image' in d:
+   v=str(d['og_image']).strip()[:500]
+   if v:https_url(v)
+   x['og_image']=v
+  if 'indexnow' in d:x['indexnow']=bool(d['indexnow'])
+  if isinstance(d.get('pages'),dict):
+   for key,o in d['pages'].items():
+    if key not in PAGES or not isinstance(o,dict):raise Problem('Unknown page')
+    x['pages'][key]={k:str(o.get(k,'')).strip()[:300] for k in ('zh_title','zh_desc','en_title','en_desc') if str(o.get(k,'')).strip()}
+    changed+=[base+PAGES[key]['path'],base+PAGES[key]['path']+'?lang=en']
+  if isinstance(d.get('card'),dict):
+   slug=str(d['card'].get('slug',''))
+   if slug not in SLUG_CARD:raise Problem('Unknown card')
+   o=x['cards'].get(slug) or {}
+   for k,limit in CARD_TEXT.items():
+    if k in d['card']:
+     v=str(d['card'][k]).strip()
+     if len(v)>limit:raise Problem(f'{k} is too long / 字数超出上限（{limit}）')
+     o[k]=v
+   o['updated']=now();o['ai']=False if d['card'].get('reviewed') else o.get('ai',False);x['cards'][slug]=o
+   changed+=[f'{base}/learn/{slug}']+([f'{base}/learn/{slug}?lang=en'] if card_has_en(o) else [])
+  put(c,'seo','config','system',x);audit(c,u['id'],'seo.update')
+  indexnow(c,changed,'seo-update')
+ return jsonify(ok=True)
+@app.post('/api/admin/seo/indexnow')
+@auth(True)
+def push_indexnow(u):
+ with lock,engine.begin() as c:
+  urls=public_urls(c,site_url());sent=indexnow(c,urls,'manual',force=True)
+ if not sent:raise Problem('IndexNow needs a public domain / 需要公网域名才能推送',409)
+ return jsonify(ok=True,count=len(urls))
+
+# ---------- AI helper shared by SEO copy and marketing (budget-protected) ----------
+def _model_call(s,messages,max_tokens,json_mode):
+ payload={'model':s['model'],'messages':messages,'max_tokens':max_tokens,'thinking':{'type':'disabled'},'stream':False}
+ if json_mode:payload['response_format']={'type':'json_object'}
+ r=httpx.post(model_url(s)+'/chat/completions',headers={'Authorization':'Bearer '+s['api_key']},json=payload,timeout=httpx.Timeout(120,connect=15),follow_redirects=False)
+ r.raise_for_status();j=r.json()
+ return j['choices'][0]['message'].get('content') or '',j.get('usage')
+def parse_json(text):
+ text=(text or '').strip()
+ try:return json.loads(text)
+ except ValueError:pass
+ a,b=text.find('{'),text.rfind('}')
+ if a>=0 and b>a:
+  try:return json.loads(text[a:b+1])
+  except ValueError:pass
+ raise Problem('The model did not return valid JSON; try again / 模型返回格式有误，请重试',502)
+def ai_complete(system,user,purpose,max_tokens=1600):
+ with lock,engine.begin() as c:
+  s=settings(c)
+  if not s['api_key']:raise Problem('Model not configured / 管理员尚未配置模型密钥',503)
+  if s['input_price']<=0 or s['output_price']<=0:raise Problem('Set model prices for budget protection / 请配置模型单价以启用预算保护',503)
+  day=datetime.now(ZoneInfo(s['timezone'])).strftime('%Y-%m-%d');budget=get(c,'budget:'+day) or dict(spent=0.,calls={})
+  reserve=((len((system+user).encode())+2000)*s['input_price']+max_tokens*s['output_price'])/1_000_000
+  if budget['spent']+reserve>s['daily_budget']:raise Problem('Daily AI budget reached / 今日AI预算已达上限',429,'ai_limit')
+  budget['spent']+=reserve;k='studio:'+purpose;budget['calls'][k]=budget['calls'].get(k,0)+1;put(c,'budget:'+day,'budget','system',budget)
+ try:text,usage=_model_call(s,[{'role':'system','content':system},{'role':'user','content':user}],max_tokens,True)
+ except Problem:raise
+ except Exception as e:
+  app.logger.warning('studio AI call (%s) failed: %s',purpose,str(e)[:300])
+  with lock,engine.begin() as c:b=get(c,'budget:'+day);b['spent']=max(0,b['spent']-reserve);put(c,'budget:'+day,'budget','system',b)
+  raise Problem('Model request failed; check the model settings / 模型请求失败，请检查模型配置',502)
+ if usage and usage.get('prompt_tokens') is not None and usage.get('completion_tokens') is not None:
+  cost=(usage['prompt_tokens']*s['input_price']+usage['completion_tokens']*s['output_price'])/1_000_000
+  with lock,engine.begin() as c:b=get(c,'budget:'+day);b['spent']=max(0,b['spent']-reserve+cost);put(c,'budget:'+day,'budget','system',b)
+ return parse_json(text)
+SAFETY='Tarot is presented as a tool for reflection, never as guaranteed prediction. Never give medical, legal, investment or gambling advice, never promise outcomes, never invent testimonials, statistics, credentials or customer results. Write original text; do not copy books or other websites.'
+CARD_SYSTEM='You write accurate, original tarot reference copy for a bilingual (Simplified Chinese / English) tarot studio website. '+SAFETY+' Return one JSON object only.'
+def card_prompt(card):
+ return json.dumps(dict(card=dict(zh=card['zh'],en=card['en'],suit=SUITS[card['suit']][1],number=card['number'],theme=card['theme'],upright=card['upright'],reversed=card['reversed_keywords']),
+  task='Write the reference copy for this card page. Keys: intro_zh (220-320 Chinese characters in 3 short paragraphs separated by \\n: imagery and symbolism; upright meaning incl. how it can show up in relationships, work and personal growth; reversed meaning and one reflection question), intro_en (160-230 words, same structure, natural English, not a translation of awkward phrasing), theme_en (max 8 words), upright_en (4-6 comma separated keywords), reversed_en (4-6 comma separated keywords), desc_zh (a search snippet of 60-90 Chinese characters), desc_en (a search snippet of 120-155 characters).'),ensure_ascii=False)
+def fill_card(slug,overwrite=False):
+ card=SLUG_CARD[slug];out=ai_complete(CARD_SYSTEM,card_prompt(card),'seo-card',1800)
+ with lock,engine.begin() as c:
+  x=seo_config(c);o=x['cards'].get(slug) or {}
+  for k in ('intro_zh','intro_en','theme_en','upright_en','reversed_en','desc_zh','desc_en'):
+   v=str(out.get(k,'')).strip()[:CARD_TEXT[k]]
+   if v and (overwrite or not o.get(k)):o[k]=v
+  o.update(ai=True,updated=now());x['cards'][slug]=o;put(c,'seo','config','system',x)
+ return o
+@app.post('/api/admin/seo/cards/<slug>/ai')
+@auth(True)
+def ai_card(u,slug):
+ if slug not in SLUG_CARD:raise Problem('Unknown card',404)
+ o=fill_card(slug,overwrite=bool(body().get('overwrite')))
+ with lock,engine.begin() as c:audit(c,u['id'],'seo.card_ai',slug);indexnow(c,[f'{site_url()}/learn/{slug}']+([f'{site_url()}/learn/{slug}?lang=en'] if card_has_en(o) else []),'card-ai')
+ return jsonify(card={k:o.get(k,'') for k in CARD_TEXT},ai=True)
+_seo_job=threading.Lock()
+def _card_batch(slugs,base_urls):
+ done=0;errors=[]
+ try:
+  for slug in slugs:
+   try:fill_card(slug);done+=1
+   except Problem as e:
+    errors.append(f'{slug}: {e.msg}')
+    if e.status in (429,503):break  # budget reached or model not configured: stop, keep what is done
+   with lock,engine.begin() as c:j=get(c,'seo:job') or {};j.update(done=done,errors=errors[-5:]);put(c,'seo:job','config','system',j)
+ finally:
+  with lock,engine.begin() as c:j=get(c,'seo:job') or {};j.update(running=False,done=done,errors=errors[-5:],finished=now());put(c,'seo:job','config','system',j)
+  seo_log(dict(kind='card-batch',count=done,ok=not errors,error='; '.join(errors[-2:])[:200]))
+  if done and base_urls[1]:
+   try:_indexnow_send(base_urls[1],base_urls[2],base_urls[0],'card-batch')
+   except Exception:pass
+  _seo_job.release()
+@app.post('/api/admin/seo/cards/batch')
+@auth(True)
+def ai_card_batch(u):
+ if not _seo_job.acquire(blocking=False):raise Problem('A batch is already running / 已有批量任务在运行',409)
+ try:
+  with lock,engine.begin() as c:
+   x=seo_config(c);s=settings(c)
+   if not s['api_key']:raise Problem('Model not configured / 管理员尚未配置模型密钥',503)
+   slugs=[CARD_SLUG[k['id']] for k in CARDS if not (x['cards'].get(CARD_SLUG[k['id']]) or {}).get('intro_zh') or not card_has_en(x['cards'].get(CARD_SLUG[k['id']]))]
+   base=site_url();host=urlparse(base).hostname if x.get('indexnow') and os.getenv('INDEXNOW','1')!='0' else ''
+   if host in ('localhost','127.0.0.1'):host=''
+   urls=[f'{base}/learn/{s_}' for s_ in slugs]+[f'{base}/learn/{s_}?lang=en' for s_ in slugs]
+   put(c,'seo:job','config','system',dict(running=True,total=len(slugs),done=0,errors=[],started=now()));audit(c,u['id'],'seo.card_batch',str(len(slugs)))
+   key=seo_key(c) if host else ''
+ except Exception:
+  _seo_job.release();raise
+ if not slugs:
+  with lock,engine.begin() as c:put(c,'seo:job','config','system',dict(running=False,total=0,done=0,errors=[],finished=now()))
+  _seo_job.release();return jsonify(ok=True,total=0)
+ threading.Thread(target=_card_batch,args=(slugs,(urls,host,key)),daemon=True).start()
+ return jsonify(ok=True,total=len(slugs))
+
+# ---------- marketing: UTM links and AI social drafts ----------
+PLATFORMS={
+ 'xiaohongshu':dict(zh='小红书',en='Xiaohongshu',lang='zh',medium='social',spec='Xiaohongshu note in Simplified Chinese: a catchy title of max 20 characters, a body of 300-600 characters with short paragraphs and a few fitting emoji, end with a gentle question to invite comments, 5-8 hashtags. Links are not clickable there, so tell readers to search the studio name or check the profile link.'),
+ 'instagram':dict(zh='Instagram',en='Instagram',lang='en',medium='social',spec='Instagram caption: strong first line, 80-180 words, line breaks, a soft call to action ("link in bio"), 8-15 relevant hashtags.'),
+ 'x':dict(zh='X / Twitter',en='X / Twitter',lang='en',medium='social',spec='One X post of max 230 characters before the link (the link is appended separately), 1-2 hashtags, no thread.'),
+ 'facebook':dict(zh='Facebook',en='Facebook',lang='en',medium='social',spec='Facebook post: 60-150 words, warm and conversational, a clear invitation to click the link, 2-4 hashtags.'),
+ 'threads':dict(zh='Threads',en='Threads',lang='en',medium='social',spec='Threads post of max 400 characters, conversational, ends with a question, 1-3 hashtags.'),
+ 'wechat':dict(zh='微信朋友圈',en='WeChat Moments',lang='zh',medium='social',spec='WeChat Moments post in Simplified Chinese, 60-150 characters, calm and personal, no hashtags, one line inviting people to try a reading.'),
+ 'channels':dict(zh='微信视频号',en='WeChat Channels',lang='zh',medium='social',spec='WeChat Channels (视频号) short-video description in Simplified Chinese: a short title of 6-16 characters (Chinese, letters and digits only, no emoji or punctuation), a description of 80-300 characters that works as a voice-over script for a 15-30 second video, warm and personal, 3-5 hashtags. Links are not clickable, so invite viewers to visit the studio via the profile.'),
+ 'tiktok':dict(zh='TikTok',en='TikTok',lang='en',medium='social',spec='TikTok caption in English for a short vertical video: a hook in the first line, 40-120 words, conversational, 3-6 hashtags (mix broad like tarot with niche ones). Links are not clickable in captions, so say "link in bio". Put the headline in title.'),
+}
+UTM_CHANNELS=list(PLATFORMS)+[x for x in ('whatsapp','telegram','tiktok','youtube','email','other') if x not in PLATFORMS]
+MKT_DEFAULTS=dict(auto_case=False,daily=False,daily_hour=9,platforms=['xiaohongshu','instagram','x'],voice='')
+MKT_SYSTEM='You are the social media editor for a bilingual online tarot studio. You write platform-native posts that feel human, calm and warm, never clickbait. '+SAFETY+' Case examples are anonymised real readings shared with consent: never add personal details, never quote more than a short phrase of the question, and describe them as one reader\'s experience. Return one JSON object only.'
+def mkt_config(c):return {**MKT_DEFAULTS,**(get(c,'marketing') or {})}
+def utm_url(base,path,source,campaign,medium='social',content=''):
+ q=dict(utm_source=source,utm_medium=medium,utm_campaign=campaign or 'always_on')
+ if content:q['utm_content']=content
+ sep='&' if '?' in path else '?'
+ return base+path+sep+'&'.join(f'{k}={quote(v,safe="")}' for k,v in q.items())
+def mkt_subject(c,source,ref):
+ if source=='case':
+  x=get(c,'case:'+ref) if re.fullmatch(r'[0-9a-f]{8}',ref or '') else None
+  if not x or x['status']!='published':raise Problem('Choose a published example / 请选择已发布的案例')
+  cp=case_public(x,True)
+  return dict(kind='case example',question=cp['question'],summary=cp['summary'],spread=cp['spread']['zh']+' / '+cp['spread']['en'],cards=[f"{k['zh']} / {k['en']}"+(' (reversed)' if k['reversed'] else '') for k in cp['cards']],reading_excerpt=cp['report'][:1500]),'/cases/'+x['slug'],'case_'+x['slug']
+ if source=='card':
+  card=SLUG_CARD.get(ref)
+  if not card:raise Problem('Choose a card / 请选择一张牌')
+  o=seo_config(c)['cards'].get(ref) or {}
+  return dict(kind='card of the day',card_zh=card['zh'],card_en=card['en'],theme=card['theme'],upright=card['upright'],reversed=card['reversed_keywords'],notes=o.get('intro_en') or o.get('intro_zh') or ''),'/learn/'+ref,'card_'+ref
+ topic=str(ref or '').strip()[:300]
+ if not topic:raise Problem('Write a topic / 请填写主题')
+ return dict(kind='topic',topic=topic),'/','topic'
+def generate_drafts(c_base,source,ref,platforms,note='',trigger='manual'):
+ # c_base: public base URL captured from a request (or SITE_URL for scheduled runs).
+ platforms=[p for p in platforms if p in PLATFORMS][:len(PLATFORMS)]
+ if not platforms:raise Problem('Choose at least one platform / 请至少选择一个平台')
+ with engine.begin() as c:
+  subject,path,campaign=mkt_subject(c,source,ref);cfg=mkt_config(c);s=settings(c)
+  # Pictures for posting: the card itself, or the first cards of a published example.
+  pics=card_media(ref) if source=='card' else [m for cd in (get(c,'case:'+ref) or {}).get('cards',[])[:4] for m in card_media(CARD_SLUG[cd['id']])] if source=='case' else []
+ brief=dict(studio=dict(zh=s['brand_zh'],en=s['brand_en'],tagline=s['tagline_en']),subject=subject,brand_voice=(cfg.get('voice') or '')[:500],extra_note=note[:300],
+  platforms={p:dict(language='Simplified Chinese' if PLATFORMS[p]['lang']=='zh' else 'English',spec=PLATFORMS[p]['spec']) for p in platforms},
+  output='JSON: {"posts":[{"platform":"<key>","title":"<optional headline>","text":"<post body without hashtags and without any URL>","hashtags":["tag without #"],"image_idea":"<one line describing a suitable image>"}]} with exactly one post per requested platform.')
+ out=ai_complete(MKT_SYSTEM,json.dumps(brief,ensure_ascii=False),'marketing',min(4800,700+550*len(platforms)))
+ posts=out.get('posts') if isinstance(out,dict) else None
+ if not isinstance(posts,list):raise Problem('The model did not return posts; try again / 模型没有返回文案，请重试',502)
+ drafts=[]
+ with lock,engine.begin() as c:
+  for p in posts:
+   key=str(p.get('platform','')).strip().lower()
+   if key not in platforms or any(d['platform']==key for d in drafts):continue
+   tags=[re.sub(r'^#+','',str(t)).strip()[:40] for t in (p.get('hashtags') or []) if str(t).strip()][:15]
+   d=dict(id='mkt:'+secrets.token_hex(8),platform=key,source=source,ref=str(ref)[:300],trigger=trigger,title=str(p.get('title','')).strip()[:120],text=str(p.get('text','')).strip()[:5000],
+    hashtags=tags,image_idea=str(p.get('image_idea','')).strip()[:300],link=utm_url(c_base,path,key,campaign,PLATFORMS[key]['medium']),status='draft',created=now(),
+    media=[dict(x) for x in pics])
+   put(c,d['id'],'mkt_draft','system',d);drafts.append(d)
+ if not drafts:raise Problem('The model did not return usable posts; try again / 模型没有返回可用文案，请重试',502)
+ auto_queue(drafts,trigger)
+ return drafts
+@app.get('/api/admin/marketing')
+@auth(True)
+def admin_marketing(u):
+ with engine.begin() as c:
+  drafts=newest(rows(c,'mkt_draft'))[:60];links=(get(c,'marketing:links') or {}).get('items',[])
+  cases=[dict(slug=x['slug'],question=x['question'],published=(x.get('published_at') or '')[:10]) for x in published_cases(c)][:50]
+  return jsonify(config=mkt_config(c),drafts=drafts,links=links,cases=cases,platforms={k:dict(zh=v['zh'],en=v['en']) for k,v in PLATFORMS.items()},channels=UTM_CHANNELS,
+   cards=[dict(slug=CARD_SLUG[k['id']],zh=k['zh'],en=k['en']) for k in CARDS],pages={k:p['path'] for k,p in PAGES.items()},base=site_url())
+@app.put('/api/admin/marketing')
+@auth(True)
+def update_marketing(u):
+ d=body()
+ with lock,engine.begin() as c:
+  cfg=mkt_config(c)
+  for k in ('auto_case','daily'):
+   if k in d:cfg[k]=bool(d[k])
+  if 'daily_hour' in d:
+   try:cfg['daily_hour']=int(d['daily_hour'])
+   except (TypeError,ValueError):raise Problem('Invalid hour')
+   if not 0<=cfg['daily_hour']<=23:raise Problem('Hour must be 0–23 / 时间须为 0–23 点')
+  if 'platforms' in d:
+   if not isinstance(d['platforms'],list) or not all(p in PLATFORMS for p in d['platforms']):raise Problem('Invalid platforms')
+   cfg['platforms']=list(dict.fromkeys(d['platforms']))
+  if 'voice' in d:cfg['voice']=str(d['voice']).strip()[:500]
+  put(c,'marketing','config','system',cfg);audit(c,u['id'],'marketing.update')
+ return jsonify(config=cfg)
+@app.post('/api/admin/marketing/generate')
+@auth(True)
+def marketing_generate(u):
+ d=body();source=textval(d,'source',10)
+ if source not in ('case','card','topic'):raise Problem('Invalid source')
+ plats=d.get('platforms') if isinstance(d.get('platforms'),list) else []
+ drafts=generate_drafts(site_url(),source,textval(d,'ref',300),plats,textval(d,'note',300))
+ with lock,engine.begin() as c:audit(c,u['id'],'marketing.generate',source)
+ return jsonify(drafts=drafts)
+@app.put('/api/admin/marketing/drafts/<id>')
+@auth(True)
+def edit_draft(u,id):
+ d=body()
+ with lock,engine.begin() as c:
+  x=get(c,'mkt:'+id) if re.fullmatch(r'[0-9a-f]{16}',id) else None
+  if not x:raise Problem('Not found / 未找到',404)
+  if d.get('action')=='delete':
+   for j in pubcore.list_jobs(c,jobs,20,draft=x['id'],statuses=('scheduled','manual')):pubcore.set_state(c,jobs,j['id'],'cancelled','draft deleted',expect=('scheduled','manual'))
+   c.execute(delete(records).where(records.c.id==x['id']));return jsonify(ok=True)
+  if 'media' in d:
+   # Reorder or remove attached files (only ids that are already attached).
+   if not isinstance(d['media'],list):raise Problem('Invalid media')
+   have={m['id']:m for m in x.get('media') or []}
+   x['media']=[have[i] for i in dict.fromkeys(str(i) for i in d['media']) if i in have]
+  if 'status' in d:
+   if d['status'] not in ('draft','posted'):raise Problem('Invalid status')
+   x['status']=d['status'];x['posted_at']=now() if d['status']=='posted' else ''
+  for k,limit in (('text',5000),('title',120)):
+   if k in d:x[k]=str(d[k]).strip()[:limit]
+  if 'hashtags' in d:
+   if not isinstance(d['hashtags'],list):raise Problem('Invalid hashtags')
+   x['hashtags']=[re.sub(r'^#+','',str(t)).strip()[:40] for t in d['hashtags'] if str(t).strip()][:15]
+  put(c,x['id'],'mkt_draft','system',x);refresh_jobs(c,x)
+ return jsonify(draft=x)
+@app.post('/api/admin/marketing/links')
+@auth(True)
+def make_link(u):
+ d=body();ch=geo.clean_token(textval(d,'channel',30));camp=geo.clean_token(textval(d,'campaign',40)) or 'always_on';path=textval(d,'path',200) or '/'
+ if ch not in UTM_CHANNELS and not re.fullmatch(r'[a-z0-9_.\-]{2,30}',ch or ''):raise Problem('Invalid channel / 渠道无效')
+ if not re.fullmatch(r'/[A-Za-z0-9/_\-]*(\?lang=en)?',path):raise Problem('Path must start with / / 页面路径须以 / 开头')
+ medium='email' if ch=='email' else ('messaging' if ch in ('whatsapp','telegram','wechat') else 'social')
+ item=dict(id=secrets.token_hex(6),channel=ch,campaign=camp,path=path,url=utm_url(site_url(),path,ch,camp,medium),created=now(),note=textval(d,'note',100))
+ with lock,engine.begin() as c:
+  x=get(c,'marketing:links') or dict(items=[]);x['items']=([item]+[i for i in x['items'] if i['url']!=item['url']])[:100];put(c,'marketing:links','config','system',x)
+ return jsonify(link=item)
+@app.delete('/api/admin/marketing/links/<id>')
+@auth(True)
+def delete_link(u,id):
+ with lock,engine.begin() as c:
+  x=get(c,'marketing:links') or dict(items=[]);x['items']=[i for i in x['items'] if i['id']!=id];put(c,'marketing:links','config','system',x)
+ return jsonify(ok=True)
+def auto_case_drafts(slug,base):
+ try:
+  with engine.connect() as c:cfg=mkt_config(c)
+  if cfg.get('auto_case'):generate_drafts(base,'case',slug,cfg['platforms'],trigger='case-published')
+ except Exception as e:app.logger.warning('auto marketing for case %s failed: %s',slug,getattr(e,'msg',str(e))[:200])
+def daily_card_slug(day):
+ # Same card for everyone on a given day, rotating through the deck.
+ return CARD_SLUG[int(hashlib.sha256(('daily|'+day).encode()).hexdigest(),16)%len(CARDS)]
+def daily_marketing():
+ with engine.connect() as c:
+  cfg=mkt_config(c);s=settings(c)
+  if not cfg.get('daily') or not s['api_key']:return
+  local=datetime.now(ZoneInfo(s['timezone']));day=local.strftime('%Y-%m-%d')
+  if local.hour<cfg['daily_hour'] or get(c,'mkt:daily:'+day):return
+ with lock,engine.begin() as c:
+  if get(c,'mkt:daily:'+day):return
+  put(c,'mkt:daily:'+day,'config','system',dict(at=now()))
+ base='https://'+CANONICAL_HOST if CANONICAL_HOST else SITE_URL
+ try:generate_drafts(base,'card',daily_card_slug(day),cfg['platforms'],trigger='daily-card')
+ except Exception as e:app.logger.warning('daily marketing failed: %s',getattr(e,'msg',str(e))[:200])
+
+# ---------- v0.8.1: scheduled posting (Xiaohongshu, WeChat Channels, TikTok) ----------
+# The web app only queues jobs and shows status. Posting runs in the separate
+# "publisher" container (Chromium + ffmpeg), see publisher/worker.py.
+PUBLISHER_URL=os.getenv('PUBLISHER_URL','http://publisher:8200').rstrip('/')
+MEDIA_DIR=DATA/'media'/'mkt'
+MEDIA_LIMITS=dict(image=20*1024*1024,video=500*1024*1024)
+MEDIA_EXT={'jpg':'image','png':'image','webp':'image','mp4':'video','mov':'video','webm':'video'}
+def publisher_token():return hmac.new(SECRET.encode(),b'publisher-api',hashlib.sha256).hexdigest()
+def publisher(method,path,timeout=100,raw=False):
+ try:r=httpx.request(method,PUBLISHER_URL+path,headers={'X-Publisher-Token':publisher_token()},timeout=timeout)
+ except httpx.HTTPError:raise Problem('Publisher service is offline; run: docker compose up -d publisher / 发帖服务未运行，请执行 docker compose up -d publisher',503)
+ if r.status_code>=400:raise Problem('Publisher error / 发帖服务出错: '+r.text[:200],502 if r.status_code>=500 else r.status_code)
+ return r.content if raw else r.json()
+def card_media(slug):
+ card=SLUG_CARD.get(slug)
+ if not card:return []
+ # The reviewed WebP (a "-safe" replacement when one exists) is what the site shows; PNG originals stay private.
+ path=(card.get('webp') or card['image']).lstrip('/')
+ return [dict(id='card-'+slug,kind='image',file=path,name=card['en'],url='/'+path)]
+def media_view(m):return {**m,'url':m.get('url') or '/api/admin/marketing/media/'+m['file'].split('/')[-1]}
+def pub_worker_state(c):
+ hb=get(c,'publish:heartbeat') or {}
+ try:online=bool(hb) and datetime.now(timezone.utc)-pubcore.parse(hb['at'])<timedelta(seconds=120)
+ except Exception:online=False
+ return dict(online=online,at=hb.get('at',''),logins=hb.get('logins',[]))
+def studio_tz(c):return settings(c)['timezone']
+def schedule_draft(c,d,when,at=None,dry_run=False,source='manual'):
+ # when: 'slot' (next free posting slot), 'now', or 'at' (a UTC datetime).
+ p=d['platform']
+ if p not in pubcore.PLATFORMS:raise Problem('This platform cannot be posted automatically; copy the text instead / 该平台不支持自动发帖，请复制文案手动发布')
+ cfg=pubcore.config(get,c)[p]
+ if cfg['mode']=='off' and not dry_run:raise Problem('Posting to this platform is switched off / 该平台的发帖已关闭，请先在“自动发帖账号”里开启')
+ if not d.get('media'):raise Problem('Add a picture or video first / 请先添加图片或视频')
+ if not dry_run and pubcore.list_jobs(c,jobs,5,draft=d['id'],statuses=('scheduled','running')):raise Problem('Already scheduled / 这条草稿已在发布队列中')
+ t=pubcore.utcnow()
+ if when=='slot':
+  t=pubcore.next_slot(c,jobs,p,cfg,studio_tz(c))
+  if not t:raise Problem('No free posting slot in the next 14 days / 未来 14 天没有空闲发帖时段')
+ elif when=='at':
+  t=at
+  if t<pubcore.utcnow()-timedelta(minutes=1) or t>pubcore.utcnow()+timedelta(days=90):raise Problem('Pick a time within the next 90 days / 请选择未来 90 天内的时间')
+ return pubcore.new_job(c,jobs,p,d,t,dry_run,source),t
+def auto_queue(drafts,trigger):
+ # New drafts for a platform with "auto queue" on go straight into its next free slot.
+ try:
+  with lock,engine.begin() as c:
+   cfgs=pubcore.config(get,c)
+   for d in drafts:
+    cfg=cfgs.get(d['platform'])
+    if not cfg or not cfg['auto_queue'] or cfg['mode']=='off' or not d.get('media'):continue
+    try:schedule_draft(c,d,'slot',source='auto:'+trigger)
+    except Problem as e:app.logger.info('auto queue skipped %s: %s',d['id'],e.msg)
+ except Exception:app.logger.exception('auto queue failed')
+def job_view(j):
+ r=j['result'];p=j['payload']
+ return dict(id=j['id'],platform=j['platform'],status=j['status'],run_at=j['run_at'],draft=j['draft'],attempts=j['attempts'],dry_run=bool(p.get('dry_run')),source=p.get('source',''),
+  title=p.get('title',''),text=p.get('text',''),hashtags=p.get('hashtags',[]),media=[media_view(m) for m in p.get('media',[])],kit=pubcore.kit_text(j),
+  url=r.get('url',''),reason=r.get('reason',''),error=r.get('error',''),shot=r.get('shot',''),via=r.get('via',''),log=r.get('log',[])[-8:],updated=j['updated'])
+def refresh_jobs(c,d):
+ # Keep queued posts in step with edits made to their draft.
+ for j in pubcore.list_jobs(c,jobs,20,draft=d['id'],statuses=('scheduled','manual')):
+  p={**j['payload'],**pubcore.snapshot(j['platform'],d)}
+  pubcore.set_state(c,jobs,j['id'],j['status'],'draft edited',expect=(j['status'],),payload=p)
+def local_to_utc(c,v):
+ try:x=datetime.fromisoformat(str(v))
+ except ValueError:raise Problem('Invalid time / 时间格式无效')
+ if not x.tzinfo:x=x.replace(tzinfo=ZoneInfo(studio_tz(c)))
+ return x.astimezone(timezone.utc)
+def draft_or_404(c,id):
+ x=get(c,'mkt:'+id) if re.fullmatch(r'[0-9a-f]{16}',id) else None
+ if not x:raise Problem('Not found / 未找到',404)
+ return x
+def pub_platform(p):
+ if p not in pubcore.PLATFORMS:raise Problem('Not found / 未找到',404)
+ return p
+
+@app.get('/api/admin/publish')
+@auth(True)
+def admin_publish(u):
+ with engine.begin() as c:
+  cfgs=pubcore.config(get,c)
+  plats={p:dict(zh=m['zh'],en=m['en'],needs=m['needs'],config=cfgs[p],account=pubcore.account(get,c,p)) for p,m in pubcore.PLATFORMS.items()}
+  return jsonify(platforms=plats,jobs=[job_view(j) for j in pubcore.list_jobs(c,jobs,80)],worker=pub_worker_state(c),tz=studio_tz(c),now=pubcore.iso(pubcore.utcnow()))
+@app.put('/api/admin/publish/<p>')
+@auth(True)
+def update_publish(u,p):
+ pub_platform(p);d=body()
+ with lock,engine.begin() as c:
+  allcfg=get(c,'publish:config') or {}
+  try:allcfg[p]=pubcore.clean_config(pubcore.config(get,c)[p],d)
+  except (ValueError,TypeError) as e:raise Problem({'slots':'Slots must look like 09:30,20:30 / 发帖时段格式如 09:30,20:30','min_gap':'Gap must be 10–1440 minutes / 间隔须为 10–1440 分钟','daily_cap':'Daily limit must be 1–10 / 每日上限须为 1–10'}.get(str(e),'Invalid settings / 设置无效'))
+  put(c,'publish:config','config','system',allcfg);audit(c,u['id'],'publish.config',p)
+  return jsonify(config=allcfg[p])
+@app.route('/api/admin/publish/<p>/login',methods=['GET','POST','DELETE'])
+@auth(True)
+def publish_login(u,p):
+ pub_platform(p)
+ if request.method=='POST':
+  with lock,engine.begin() as c:audit(c,u['id'],'publish.login',p)
+ return jsonify(publisher(request.method,'/login/'+p))
+@app.post('/api/admin/publish/<p>/<any(check,logout):act>')
+@auth(True)
+def publish_account(u,p,act):
+ pub_platform(p)
+ with lock,engine.begin() as c:audit(c,u['id'],'publish.'+act,p)
+ return jsonify(publisher('POST',f'/{act}/'+p,160))
+@app.get('/api/admin/publish/shot/<name>')
+@auth(True)
+def publish_shot(u,name):
+ if not re.fullmatch(r'[A-Za-z0-9_\-]+\.png',name):raise Problem('Not found / 未找到',404)
+ return Response(publisher('GET','/shot/'+name,30,True),mimetype='image/png',headers={'Cache-Control':'private, max-age=86400'})
+@app.post('/api/admin/marketing/drafts/<id>/schedule')
+@auth(True)
+def schedule(u,id):
+ d=body();when=d.get('when','slot')
+ if when not in ('slot','now','at'):raise Problem('Invalid time / 时间无效')
+ with lock,engine.begin() as c:
+  x=draft_or_404(c,id)
+  jid,t=schedule_draft(c,x,when,local_to_utc(c,d.get('at')) if when=='at' else None,bool(d.get('dry_run')))
+  audit(c,u['id'],'publish.schedule',jid)
+  return jsonify(job=job_view(pubcore.get_job(c,jobs,jid)))
+@app.post('/api/admin/publish/jobs/<id>')
+@auth(True)
+def job_action(u,id):
+ d=body();act=d.get('action')
+ if not re.fullmatch(r'pub_[0-9a-f]{16}',id):raise Problem('Not found / 未找到',404)
+ with lock,engine.begin() as c:
+  j=pubcore.get_job(c,jobs,id)
+  if not j:raise Problem('Not found / 未找到',404)
+  if act=='cancel':x=pubcore.set_state(c,jobs,id,'cancelled','by admin',expect=('scheduled','manual','failed'))
+  elif act=='now':x=pubcore.set_state(c,jobs,id,'scheduled','run now',expect=('scheduled',),run_at=pubcore.utcnow())
+  elif act=='retry':
+   if j['payload'].get('dry_run'):raise Problem('Start a new test instead / 请重新试运行')
+   c.execute(update(jobs).where(jobs.c.id==id).values(attempts=0))
+   x=pubcore.set_state(c,jobs,id,'scheduled','retry by admin',expect=('manual','failed','cancelled'),run_at=pubcore.utcnow())
+  elif act=='posted':
+   url=textval(d,'url',500)
+   if url:https_url(url)
+   x=pubcore.set_state(c,jobs,id,'published','posted by hand',expect=('manual','scheduled','failed','cancelled'),url=url,via='manual')
+   dr=get(c,j['draft']) if x and j['draft'] else None
+   if dr:dr.update(status='posted',posted_at=now(),posted_url=url,posted_via='manual:'+j['platform']);put(c,dr['id'],'mkt_draft','system',dr)
+  elif act=='delete':
+   if j['status'] not in ('cancelled','tested','failed','published'):raise Problem('Cancel it first / 请先取消')
+   c.execute(delete(jobs).where(jobs.c.id==id));return jsonify(ok=True)
+  else:raise Problem('Invalid action')
+  if not x:raise Problem('This post changed state; refresh / 状态已变化，请刷新',409)
+  audit(c,u['id'],'publish.'+act,id)
+  return jsonify(job=job_view(x))
+@app.post('/api/admin/marketing/drafts/<id>/media')
+@auth(True)
+def upload_media(u,id):
+ # Raw body upload (one file per request) streamed to disk; the global 100 kB limit stays for everything else.
+ ext=(request.headers.get('X-Filename','').rsplit('.',1)[-1] or '').lower()
+ kind=MEDIA_EXT.get('jpg' if ext=='jpeg' else ext)
+ if not kind:raise Problem('Use JPG, PNG, WebP, MP4, MOV or WebM / 仅支持 JPG、PNG、WebP、MP4、MOV、WebM')
+ size=request.content_length or 0
+ if not 0<size<=MEDIA_LIMITS[kind]:raise Problem(f"File too large (max {MEDIA_LIMITS[kind]//1048576} MB) / 文件过大（上限 {MEDIA_LIMITS[kind]//1048576} MB）",413)
+ request.max_content_length=MEDIA_LIMITS[kind]
+ with engine.begin() as c:
+  x=draft_or_404(c,id);cur=x.get('media') or []
+  if kind=='video' and any(m['kind']=='video' for m in cur):raise Problem('One video per post / 每条帖子只能放一个视频')
+  if len(cur)>=9:raise Problem('Up to 9 files / 最多 9 个文件')
+ MEDIA_DIR.mkdir(parents=True,exist_ok=True)
+ fn=secrets.token_hex(12)+'.'+('jpg' if ext=='jpeg' else ext);path=MEDIA_DIR/fn;n=0;head=b''
+ try:
+  with open(path,'wb') as f:
+   while True:
+    chunk=request.stream.read(1<<20)
+    if not chunk:break
+    if len(head)<16:head+=chunk[:16]
+    n+=len(chunk)
+    if n>MEDIA_LIMITS[kind]:raise Problem('File too large / 文件过大',413)
+    f.write(chunk)
+  ok={'jpg':head[:3]==b'\xff\xd8\xff','png':head[:8]==b'\x89PNG\r\n\x1a\n','webp':head[:4]==b'RIFF' and head[8:12]==b'WEBP',
+      'mp4':head[4:8]==b'ftyp','mov':head[4:8] in (b'ftyp',b'moov',b'wide',b'mdat'),'webm':head[:4]==b'\x1aE\xdf\xa3'}[fn.rsplit('.',1)[1]]
+  if not ok or n!=size:raise Problem('The file content does not match its type / 文件内容与格式不符')
+  os.chmod(path,0o644)
+ except BaseException:
+  path.unlink(missing_ok=True);raise
+ item=dict(id=fn.split('.')[0],kind=kind,file='media/mkt/'+fn,name=re.sub(r'[\x00-\x1f<>"]','',unquote(request.headers.get('X-Filename','')))[-80:],size=n)
+ with lock,engine.begin() as c:
+  x=draft_or_404(c,id);x['media']=(x.get('media') or [])+[item];put(c,x['id'],'mkt_draft','system',x);refresh_jobs(c,x)
+ return jsonify(draft=x)
+@app.get('/api/admin/marketing/media/<name>')
+@auth(True)
+def get_media(u,name):
+ if not re.fullmatch(r'[0-9a-f]{24}\.(jpg|png|webp|mp4|mov|webm)',name) or not (MEDIA_DIR/name).is_file():raise Problem('Not found / 未找到',404)
+ r=send_from_directory(MEDIA_DIR,name,conditional=True,download_name=name)
+ r.headers['Cache-Control']='private, max-age=86400';return r
+def purge_media(keep_draft=None):
+ # Delete uploaded files that no draft or open job references any more.
+ with engine.begin() as c:
+  used={m['file'].split('/')[-1] for x in rows(c,'mkt_draft') for m in x.get('media') or []}
+  used|={m['file'].split('/')[-1] for j in pubcore.list_jobs(c,jobs,500,statuses=pubcore.OPEN) for m in j['payload'].get('media',[])}
+ for f in MEDIA_DIR.glob('*') if MEDIA_DIR.exists() else []:
+  if f.name not in used and time.time()-f.stat().st_mtime>600:f.unlink(missing_ok=True)
+
 _last_cleanup=[0.]
 def cleanup():
  # Once an hour: drop visitor hashes older than 90 days and expired reset links.
  if time.time()-_last_cleanup[0]<3600:return
  _last_cleanup[0]=time.time()
+ try:purge_media()
+ except Exception:app.logger.exception('media cleanup failed')
  with lock,engine.begin() as c:
   today=datetime.now(timezone.utc).date()
   for i in range(91,121):
-   for prefix in ('visit','cv','rv'):c.execute(delete(records).where(records.c.kind=='visit').where(records.c.id.like(f'{prefix}:{(today-timedelta(days=i)).isoformat()}:%')))
+   for prefix in MARKS:c.execute(delete(records).where(records.c.kind=='visit').where(records.c.id.like(f'{prefix}:{(today-timedelta(days=i)).isoformat()}:%')))
   for rid,payload in c.execute(select(records.c.id,records.c.payload).where(records.c.kind=='reset')).all():
    if json.loads(payload).get('exp',0)<time.time():c.execute(delete(records).where(records.c.id==rid))
+_last_daily=[0.]
 def worker():
  while True:
   try:cleanup()
   except Exception:app.logger.exception('cleanup failed')
+  if time.time()-_last_daily[0]>60:
+   _last_daily[0]=time.time()
+   try:daily_marketing()
+   except Exception:app.logger.exception('daily marketing failed')
   try:
    with lock,engine.begin() as c:
     pending=[]

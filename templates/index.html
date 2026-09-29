@@ -43,28 +43,34 @@
 {%- else %}
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="{{ canonical }}">
+{%- if has_en %}
 <link rel="alternate" hreflang="zh-Hans" href="{{ site_url }}{{ path }}">
 <link rel="alternate" hreflang="en" href="{{ site_url }}{{ path }}?lang=en">
 <link rel="alternate" hreflang="x-default" href="{{ site_url }}{{ path }}">
 {%- endif %}
+{%- endif %}
+{%- for k, name in [('google', 'google-site-verification'), ('bing', 'msvalidate.01'), ('baidu', 'baidu-site-verification'), ('yandex', 'yandex-verification')] %}{% if verify[k] %}
+<meta name="{{ name }}" content="{{ verify[k] }}">{% endif %}{% endfor %}
 <meta name="theme-color" content="#111b29">
 <meta name="color-scheme" content="dark">
 <meta name="format-detection" content="telephone=no">
-<meta property="og:type" content="{{ 'article' if page == 'case' else 'website' }}">
+<meta property="og:type" content="{{ 'article' if page in ('case', 'card') else 'website' }}">
 <meta property="og:site_name" content="{{ s.brand_en }} · {{ s.brand_zh }}">
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
 <meta property="og:url" content="{{ canonical }}">
-<meta property="og:image" content="{{ site_url }}/static/og-cover.jpg">
+<meta property="og:image" content="{{ site_url ~ card.webp if page == 'card' else og_image }}">
+{%- if page != 'card' %}
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+{%- endif %}
 <meta property="og:image:alt" content="{{ s.brand_en }}">
 <meta property="og:locale" content="{{ 'zh_CN' if zh else 'en_US' }}">
 <meta property="og:locale:alternate" content="{{ 'en_US' if zh else 'zh_CN' }}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="{{ title }}">
 <meta name="twitter:description" content="{{ description }}">
-<meta name="twitter:image" content="{{ site_url }}/static/og-cover.jpg">
+<meta name="twitter:image" content="{{ site_url ~ card.webp if page == 'card' else og_image }}">
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/static/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
@@ -83,6 +89,18 @@
     {"@type": "WebPage", "url": canonical, "name": title, "description": description, "inLanguage": "zh-CN" if zh else "en", "isPartOf": {"@id": site_url ~ "/#website"}}
   ]
 } | tojson }}</script>
+{%- if page == 'card' %}
+<script type="application/ld+json">{{ {
+  "@context": "https://schema.org",
+  "@graph": [
+    {"@type": "BreadcrumbList", "itemListElement": [
+      {"@type": "ListItem", "position": 1, "name": tr('首页', 'Home'), "item": site_url ~ "/"},
+      {"@type": "ListItem", "position": 2, "name": tr('塔罗牌义大全', 'Tarot card meanings'), "item": site_url ~ "/learn" ~ ('' if zh else '?lang=en')},
+      {"@type": "ListItem", "position": 3, "name": card.zh if zh else card.en, "item": canonical}]},
+    {"@type": "Article", "headline": title, "description": description, "image": site_url ~ card.webp, "inLanguage": "zh-CN" if zh else "en", "mainEntityOfPage": canonical, "author": {"@id": site_url ~ "/#org"}, "publisher": {"@id": site_url ~ "/#org"}, "about": {"@type": "Thing", "name": card.en, "alternateName": card.zh}}
+  ]
+} | tojson }}</script>
+{%- endif %}
 {%- if page in ('home', 'human') %}
 <script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": faq_ld} | tojson }}</script>
 {%- endif %}
@@ -93,14 +111,14 @@
 <a class="brand" href="/" aria-label="{{ s.brand_en }} · {{ s.brand_zh }}"><span class="brand-mark" aria-hidden="true">✦</span><span class="brand-name">{{ s.brand_en }}<small>GLOBAL ONLINE STUDIO</small></span></a>
 <a class="header-account" id="header-account" href="/#login">{{ tr('登录', 'Sign in') }}</a>
 <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="nav" aria-label="{{ tr('菜单', 'Menu') }}"><span></span><span></span><span></span></button>
-<nav id="nav" aria-label="{{ tr('主导航', 'Main') }}"><a href="/ai">{{ tr('AI 解读', 'AI reading') }}</a><a href="/human">{{ tr('真人咨询', 'Personal reading') }}</a><a href="/cases"{% if page in ('cases', 'case') %} aria-current="page"{% endif %}>{{ tr('算牌案例', 'Examples') }}</a><a href="/learn">{{ tr('塔罗学习', 'Learn') }}</a><a class="nav-login" href="/#login">{{ tr('登录', 'Sign in') }}</a><a class="lang-toggle" href="?lang={{ 'en' if zh else 'zh' }}" hreflang="{{ 'en' if zh else 'zh-Hans' }}"><b>{{ '中' if zh else 'EN' }}</b> / {{ 'EN' if zh else '中' }}</a></nav>
+<nav id="nav" aria-label="{{ tr('主导航', 'Main') }}"><a href="/ai">{{ tr('AI 解读', 'AI reading') }}</a><a href="/human">{{ tr('真人咨询', 'Personal reading') }}</a><a href="/cases"{% if page in ('cases', 'case') %} aria-current="page"{% endif %}>{{ tr('算牌案例', 'Examples') }}</a><a href="/learn"{% if page in ('learn', 'card') %} aria-current="page"{% endif %}>{{ tr('塔罗学习', 'Learn') }}</a><a class="nav-login" href="/#login">{{ tr('登录', 'Sign in') }}</a><a class="lang-toggle" href="?lang={{ 'en' if zh else 'zh' }}" hreflang="{{ 'en' if zh else 'zh-Hans' }}"><b>{{ '中' if zh else 'EN' }}</b> / {{ 'EN' if zh else '中' }}</a></nav>
 </header>
-<main id="app" tabindex="-1" data-ssr="{{ 'case' if page in ('case', 'gone') else ('cases' if page == 'cases' else '') }}">
+<main id="app" tabindex="-1" data-ssr="{{ 'case' if page in ('case', 'gone') else (page if page in ('cases', 'card') else '') }}">
 {%- if page == 'learn' %}
 <section class="library-hero"><div><div class="eyebrow">THE COMPLETE TAROT LIBRARY</div><h1>{{ tr('78张牌，逐一认识。', 'Get to know all 78 cards.') }}</h1></div><div class="library-count"><b>78</b><span>{{ tr('张完整牌面', 'complete cards') }}</span></div></section>
 <div class="grid" id="card-library">
 {%- for c in cards %}
-<article class="panel library-card"><img src="{{ c.webp or c.image }}" alt="{{ c.zh if zh else c.en }}" width="276" height="428" loading="lazy" decoding="async"><div><small>{{ c.asset_id }}</small><h2 class="h3">{{ c.zh }} · {{ c.en }}</h2><p>{{ c.theme }}</p><div class="meaning"><b>{{ tr('正位', 'Upright') }}</b><p>{{ c.upright }}</p><b>{{ tr('逆位', 'Reversed') }}</b><p>{{ c.reversed_keywords }}</p></div></div></article>
+<article class="panel library-card"><img src="{{ c.webp or c.image }}" alt="{{ c.zh if zh else c.en }}" width="276" height="428" loading="lazy" decoding="async"><div><small>{{ c.asset_id }}</small><h2 class="h3"><a href="/learn/{{ card_slugs[c.id] }}{{ '' if zh else '?lang=en' }}">{{ c.zh }} · {{ c.en }}</a></h2><p>{{ c.theme }}</p><div class="meaning"><b>{{ tr('正位', 'Upright') }}</b><p>{{ c.upright }}</p><b>{{ tr('逆位', 'Reversed') }}</b><p>{{ c.reversed_keywords }}</p></div></div></article>
 {%- endfor %}
 </div>
 {%- elif page in ('ai', 'human') %}
@@ -149,6 +167,27 @@
 <p class="muted cm-note">{% if comment_review == 'all' %}{{ tr('所有评价经工作室审核后显示。', 'Every comment is reviewed by the studio before it appears.') }}{% elif comment_review == 'flagged' %}{{ tr('评价会直接显示；含联系方式等内容的会先由工作室审核。', 'Comments appear right away; ones with contact details are reviewed first.') }}{% else %}{{ tr('登录用户的评价直接显示；游客评价经工作室审核后显示。', 'Comments from signed-in members appear right away; guest comments are reviewed first.') }}{% endif %}</p></form></section>
 <div class="case-cta panel"><div><b>{{ tr('也想问问自己的问题？', 'Have a question of your own?') }}</b><p class="muted">{{ tr('用同一个牌阵亲自抽牌，或请工作室的塔罗师为你解读。', 'Draw your own cards with the same spread, or ask a studio reader.') }}</p></div><div class="actions"><a class="button primary" href="/#question/{{ case.spread.id }}" data-track="case_to_reading">{{ tr('用这个牌阵问我自己的问题', 'Ask with this spread') }} →</a><a class="button" href="/human" data-track="case_to_human">{{ tr('请真人塔罗师解读', 'Ask a studio reader') }}</a></div></div>
 <p class="case-note">{{ tr('本案例经提问者授权、工作室审核后匿名展示。塔罗用于反思，不保证结果。', 'Shared with the asker’s permission and reviewed by the studio. Tarot offers reflection, not guaranteed outcomes.') }}</p></article>
+{%- elif page == 'card' %}
+{%- set suit_name = card.suit_zh if zh else card.suit_en %}
+<article class="card-page wide" data-card-page="{{ card.slug }}">
+<nav class="breadcrumb" aria-label="{{ tr('位置', 'Breadcrumb') }}"><a href="/{{ '' if zh else '?lang=en' }}">{{ tr('首页', 'Home') }}</a><span aria-hidden="true">›</span><a href="/learn{{ '' if zh else '?lang=en' }}">{{ tr('塔罗牌义大全', 'Card meanings') }}</a><span aria-hidden="true">›</span><span>{{ suit_name }}</span></nav>
+<div class="card-hero"><div class="card-art"><img src="{{ card.webp or card.image }}" alt="{{ card.zh }} · {{ card.en }}" width="276" height="428" fetchpriority="high" decoding="async"></div>
+<div><div class="eyebrow">{{ card.suit_en | upper }}{% if card.suit != 'major' or card.number %} · {{ card.number }}{% endif %}</div>
+<h1>{% if zh %}{{ card.zh }}<small class="card-alt">{{ card.en }}</small>{% else %}{{ card.en }}<small class="card-alt">{{ card.zh }}</small>{% endif %}</h1>
+<p class="card-theme">{{ card.theme if zh else (card.theme_en or card.key_en) }}</p>
+<dl class="card-keys"><div><dt>{{ tr('正位', 'Upright') }}</dt><dd>{{ card.upright if zh else (card.upright_en or card.key_en) }}</dd></div><div><dt>{{ tr('逆位', 'Reversed') }}</dt><dd>{{ card.reversed_keywords if zh else (card.reversed_en or '—') }}</dd></div></dl>
+<div class="actions"><a class="button primary" href="/#ai" data-track="card_to_reading">{{ tr('带着问题抽一次牌', 'Ask a question and draw') }} →</a><a class="button" href="/human" data-track="cta_human">{{ tr('请真人塔罗师解读', 'Ask a studio reader') }}</a></div></div></div>
+{%- set intro = card.intro_zh if zh else card.intro_en %}
+{%- if intro %}
+<section class="panel card-intro"><h2>{{ tr('这张牌在说什么', 'What this card is about') }}</h2>{% for para in intro.split('\n') if para.strip() %}<p>{{ para }}</p>{% endfor %}{% if card.updated %}<p class="muted card-updated">{{ tr('更新于', 'Updated') }} {{ card.updated }}</p>{% endif %}</section>
+{%- elif not zh %}
+<div class="note">{{ 'A full English write-up for this card is coming soon. The keywords above come from our studio deck notes.' }}</div>
+{%- endif %}
+<section class="card-howto"><h2>{{ tr('读牌时可以这样用', 'Using it in a reading') }}</h2><ul><li>{{ tr('正位：把关键词当作“现在可以借力的方向”，想想它在你的问题里对应什么具体行动。', 'Upright: treat the keywords as what you can lean on right now, and name one concrete step.') }}</li><li>{{ tr('逆位：常见含义是受阻、过度、不足或转向内在，结合牌位判断是哪一种。', 'Reversed: usually blocked, excessive, lacking or turned inward. The position tells you which.') }}</li><li>{{ tr('和相邻的牌一起看，单张牌的意思会被整体画面修正。', 'Read it with its neighbours; the whole spread refines a single card.') }}</li></ul></section>
+<nav class="card-pager" aria-label="{{ tr('上一张与下一张', 'Previous and next card') }}">{% if card_nav.prev %}<a href="/learn/{{ card_slugs[card_nav.prev.id] }}{{ '' if zh else '?lang=en' }}" rel="prev">← {{ card_nav.prev.zh if zh else card_nav.prev.en }}</a>{% else %}<span></span>{% endif %}{% if card_nav.next %}<a href="/learn/{{ card_slugs[card_nav.next.id] }}{{ '' if zh else '?lang=en' }}" rel="next">{{ card_nav.next.zh if zh else card_nav.next.en }} →</a>{% endif %}</nav>
+<section class="card-siblings"><h2 class="h3">{{ tr('同组的其他牌', 'More from ') ~ ('' if zh else suit_name) }}{{ '：' ~ suit_name if zh }}</h2><ul role="list">{% for x in siblings if x.id != card.id %}<li><a href="/learn/{{ card_slugs[x.id] }}{{ '' if zh else '?lang=en' }}"><img src="{{ x.thumb or x.webp or x.image }}" alt="" width="60" height="93" loading="lazy" decoding="async"><span>{{ x.zh if zh else x.en }}</span></a></li>{% endfor %}</ul></section>
+<p class="case-note">{{ tr('塔罗用于反思与探索，牌义不代表对任何结果的保证。', 'Tarot offers reflection; card meanings are not a promise of any outcome.') }}</p>
+</article>
 {%- elif page == 'gone' %}
 <div class="narrow empty"><h1>{{ tr('这个案例已经下架', 'This example has been removed') }}</h1><p class="muted">{{ tr('提问者撤回了授权，或工作室已停止展示。', 'The asker withdrew permission, or the studio stopped showing it.') }}</p><a class="button" href="/cases">{{ tr('看看其他案例', 'See other examples') }} →</a></div>
 {%- elif page == 'terms' %}

@@ -1,0 +1,191 @@
+{
+  "_comment": "Page locators for the creator websites. Each entry is a list of candidates tried in order. If a platform redesigns its page, copy this file to the publisher volume as selectors.json, fix the entry, and restart the publisher container; no rebuild needed.",
+  "xiaohongshu": {
+    "home_url": "https://creator.xiaohongshu.com/new/home",
+    "login_url": "https://creator.xiaohongshu.com/login",
+    "publish_url": "https://creator.xiaohongshu.com/publish/publish?source=official",
+    "logged_out_url": [
+      "/login"
+    ],
+    "session_cookies": [
+      "galaxy_creator_session_id",
+      "web_session",
+      "access-token-creator.xiaohongshu.com"
+    ],
+    "qr_switch": [
+      "img.css-wemwzq",
+      "div.login-box-container img[class*='css-']",
+      "text=扫码登录"
+    ],
+    "qr": [
+      "img.css-1lhmg90",
+      "div.qrcode img",
+      "img[class*='qrcode']",
+      "canvas"
+    ],
+    "tab_images": [
+      "div.creator-tab:has-text('上传图文')",
+      "span:text-is('上传图文')",
+      "text=上传图文"
+    ],
+    "tab_video": [
+      "div.creator-tab:has-text('上传视频')",
+      "span:text-is('上传视频')",
+      "text=上传视频"
+    ],
+    "file_input": [
+      "input.upload-input",
+      "input[type='file']"
+    ],
+    "upload_done_video": [
+      "text=上传成功",
+      "text=重新上传",
+      "div.preview-new video"
+    ],
+    "title": [
+      "input[placeholder*='标题']",
+      "div.titleInput input",
+      "input.d-text"
+    ],
+    "body": [
+      "div.tiptap.ProseMirror",
+      "div.ql-editor",
+      "div[contenteditable='true']"
+    ],
+    "tag_suggestion": [
+      "#creator-editor-topic-container .item",
+      "div.ql-mention-list-item",
+      "div.tippy-box li"
+    ],
+    "publish_button": [
+      "button.publishBtn",
+      "div.submit button:has-text('发布')",
+      "button:text-is('发布')",
+      "button:has-text('发布')"
+    ],
+    "success_url": [
+      "/publish/success"
+    ],
+    "success_text": [
+      "发布成功"
+    ],
+    "risk_text": [
+      "安全验证",
+      "请完成验证",
+      "滑块",
+      "操作频繁",
+      "账号异常",
+      "访问频次异常"
+    ]
+  },
+  "channels": {
+    "home_url": "https://channels.weixin.qq.com/platform",
+    "login_url": "https://channels.weixin.qq.com/login.html",
+    "publish_url": "https://channels.weixin.qq.com/platform/post/create",
+    "logged_out_url": [
+      "login"
+    ],
+    "session_cookies": [
+      "sessionid"
+    ],
+    "qr_switch": [],
+    "qr": [
+      "img.qrcode",
+      "div.qrcode img",
+      "img[class*='qrcode']"
+    ],
+    "file_input": [
+      "input[type='file'][accept*='video']",
+      "input[type='file']"
+    ],
+    "upload_done_video": [
+      "div.media-status-content:has-text('删除')",
+      "text=更换视频",
+      "div.finder-tag-wrap"
+    ],
+    "body": [
+      "div.input-editor",
+      "div[contenteditable='']",
+      "div[contenteditable='true']"
+    ],
+    "short_title": [
+      "input[placeholder*='概括视频主要内容']",
+      "div.short-title-wrap input",
+      "input.weui-input"
+    ],
+    "original": [
+      "label:has-text('声明原创') input[type='checkbox']"
+    ],
+    "publish_button": [
+      "div.form-btns button:has-text('发表')",
+      "button:text-is('发表')"
+    ],
+    "disabled_class": "weui-desktop-btn_disabled",
+    "success_url": [
+      "/post/list"
+    ],
+    "success_text": [
+      "发表成功"
+    ],
+    "risk_text": [
+      "安全验证",
+      "操作过于频繁",
+      "账号存在风险",
+      "请在手机上确认"
+    ]
+  },
+  "tiktok": {
+    "home_url": "https://www.tiktok.com/tiktokstudio",
+    "login_url": "https://www.tiktok.com/login/qrcode?lang=en",
+    "publish_url": "https://www.tiktok.com/tiktokstudio/upload?lang=en",
+    "logged_out_url": [
+      "/login"
+    ],
+    "session_cookies": [
+      "sessionid",
+      "sessionid_ss"
+    ],
+    "qr_switch": [],
+    "qr": [
+      "div[data-e2e='qr-code'] canvas",
+      "div[class*='QrCode'] canvas",
+      "canvas"
+    ],
+    "file_input": [
+      "input[type='file'][accept*='video']",
+      "input[type='file']"
+    ],
+    "upload_done_video": [
+      "[data-e2e='upload_status_container'] :text('Uploaded')",
+      "text=Uploaded",
+      "div.info-status.success"
+    ],
+    "body": [
+      "div.public-DraftEditor-content",
+      "div[contenteditable='true']"
+    ],
+    "publish_button": [
+      "button[data-e2e='post_video_button']",
+      "button:has-text('Post')"
+    ],
+    "confirm_buttons": [
+      "button:has-text('Post now')",
+      "div[role='dialog'] button:has-text('Post')"
+    ],
+    "success_url": [
+      "/tiktokstudio/content"
+    ],
+    "success_text": [
+      "Your video has been uploaded",
+      "Video published",
+      "Manage your posts"
+    ],
+    "risk_text": [
+      "Verify to continue",
+      "Maximum number of attempts",
+      "Too many attempts",
+      "captcha",
+      "unusual activity"
+    ]
+  }
+}

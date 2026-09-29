@@ -24,15 +24,26 @@ server {
     # Versioned static files and card artwork: served by the app with long-lived
     # Cache-Control headers; let nginx buffer them for faster delivery.
     location /static/ {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8180;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;
         proxy_buffering on;
     }
 
+    # v0.8.1: pictures/videos for scheduled posts (up to 500 MB, admin only).
+    location ~ ^/api/admin/marketing/drafts/[0-9a-f]+/media$ {
+        client_max_body_size 500m;
+        proxy_request_buffering off;
+        proxy_pass http://127.0.0.1:8180;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 300s;
+    }
+
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8180;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto https;

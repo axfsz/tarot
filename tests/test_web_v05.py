@@ -1,4 +1,4 @@
-import os,sys,tempfile,json,gzip,time
+import re,os,sys,tempfile,json,gzip,time
 os.environ.setdefault('DATA_DIR',tempfile.mkdtemp())
 os.environ.setdefault('SETUP_TOKEN','test-install-token')
 os.environ['START_WORKER']='0'
@@ -34,7 +34,7 @@ def test_robots_sitemap_manifest():
  robots=c.get('/robots.txt').get_data(as_text=True)
  assert 'Disallow: /api/' in robots and m.SITE_URL+'/sitemap.xml' in robots
  xml=c.get('/sitemap.xml');assert xml.mimetype=='application/xml'
- body=xml.get_data(as_text=True);assert body.count('<url>')-body.count('/cases/')==len(m.PAGES)*2 and 'hreflang="x-default"' in body
+ body=xml.get_data(as_text=True);locs=re.findall(r'<loc>([^<]+)</loc>',body);assert len([x for x in locs if '/cases/' not in x and '/learn/' not in x])==len(m.PAGES)*2 and 'hreflang="x-default"' in body
  man=c.get('/manifest.webmanifest');assert man.mimetype=='application/manifest+json' and man.json['start_url']=='/'
 
 def test_catalog_is_versioned_and_bootstrap_is_small():

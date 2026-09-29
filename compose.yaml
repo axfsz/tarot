@@ -24,6 +24,7 @@ services:
       SITE_URL: ${SITE_URL:-https://tarot.opsglobalonline.com}
       SITE_HOSTS: ${SITE_HOSTS:-honeytime.life,www.honeytime.life,tarot.opsglobalonline.com}
       CANONICAL_HOST: ${CANONICAL_HOST:-}
+      INDEXNOW: ${INDEXNOW:-1}
       GUEST_AI_LIMIT: ${GUEST_AI_LIMIT:-1}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -40,6 +41,7 @@ services:
       AI_INPUT_PRICE: ${AI_INPUT_PRICE:-}
       AI_OUTPUT_PRICE: ${AI_OUTPUT_PRICE:-}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-}
+      PUBLISHER_URL: http://publisher:8200
     ports:
       - '0.0.0.0:${APP_PORT:-8180}:8000'
     volumes:
@@ -52,6 +54,43 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+  # v0.8.1 scheduled posting (Xiaohongshu / WeChat Channels / TikTok).
+  # Not published on any host port: only the app talks to it, over the compose network.
+  publisher:
+    build:
+      context: .
+      dockerfile: publisher/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://tarot:${POSTGRES_PASSWORD}@db:5432/tarot
+      APP_SECRET: ${APP_SECRET:?Run scripts/init.py}
+      SITE_URL: ${SITE_URL:-https://tarot.opsglobalonline.com}
+      CANONICAL_HOST: ${CANONICAL_HOST:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-1}
+      NOTIFY_EMAIL: ${NOTIFY_EMAIL:-}
+      PUBLISHER_HEADLESS: ${PUBLISHER_HEADLESS:-0}
+      PUBLISHER_RISK_COOLDOWN_HOURS: ${PUBLISHER_RISK_COOLDOWN_HOURS:-24}
+      PUBLISHER_PROXY_TIKTOK: ${PUBLISHER_PROXY_TIKTOK:-}
+      PUBLISHER_PROXY_XIAOHONGSHU: ${PUBLISHER_PROXY_XIAOHONGSHU:-}
+      PUBLISHER_PROXY_CHANNELS: ${PUBLISHER_PROXY_CHANNELS:-}
+    volumes:
+      - app_data:/data:ro
+      - publisher_data:/pubdata
+    shm_size: 1gb
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8200/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 volumes:
   postgres_data:
   app_data:
+  publisher_data:
