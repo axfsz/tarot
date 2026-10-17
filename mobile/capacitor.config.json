@@ -1,0 +1,34 @@
+{
+  "appId": "life.honeytime.tarot",
+  "appName": "奥普塔罗",
+  "webDir": "www",
+  "backgroundColor": "#111b29",
+  "server": {
+    "url": "https://honeytime.life",
+    "cleartext": false,
+    "allowNavigation": ["honeytime.life", "www.honeytime.life", "tarot.opsglobalonline.com"],
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "appendUserAgent": "OpsTarotApp/ios",
+    "contentInset": "never",
+    "backgroundColor": "#111b29"
+  },
+  "android": {
+    "appendUserAgent": "OpsTarotApp/android",
+    "allowMixedContent": false,
+    "backgroundColor": "#111b29"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 300,
+      "backgroundColor": "#111b29",
+      "showSpinner": false
+    },
+    "LocalNotifications": {
+      "iconColor": "#dcc296"
+    }
+  }
+}

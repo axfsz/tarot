@@ -14,7 +14,7 @@
 {%- endif -%}
 {%- endmacro -%}
 {%- macro like_button(slug, n, on, big=false) -%}<button type="button" class="like-btn{% if big %} big{% endif %}{% if on %} on{% endif %}" data-like="{{ slug }}" aria-pressed="{{ 'true' if on else 'false' }}" aria-label="{{ tr('觉得有启发，点个爱心', 'Found it helpful — like') }}">{{ icon('heart') }}<span data-like-count>{{ n }}</span>{% if big %}<span class="like-text">{{ tr('有启发', 'Helpful') }}</span>{% endif %}</button>{%- endmacro -%}
-{%- macro comment_item(m) -%}<li class="comment{% if m.mine %} is-mine{% endif %}" data-cm-id="{{ m.id }}"><div class="cm-head"><b>{{ m.name or (tr(pub.brand_zh, pub.brand_en) if m.badge == 'studio' else tr('匿名读者', 'Anonymous reader')) }}</b>{% if m.badge %}<span class="cm-badge cm-{{ m.badge }}">{{ {'studio': tr('工作室', 'Studio'), 'asker': tr('提问者本人', 'The asker'), 'member': tr('注册用户', 'Member')}[m.badge] }}</span>{% endif %}{% if m.mine %}<span class="cm-badge cm-mine">{{ tr('我的评价', 'Yours') }}</span>{% endif %}{% if m.status == 'pending' %}<span class="cm-badge cm-wait">{{ tr('审核中 · 仅你可见', 'In review · only you can see it') }}</span>{% elif m.status == 'hidden' %}<span class="cm-badge cm-wait">{{ tr('未公开 · 仅你可见', 'Not shown publicly') }}</span>{% endif %}<time datetime="{{ m.date }}">{{ m.date }}</time></div><p class="user-text">{{ m.text }}</p>{% if m.mine %}<div class="cm-tools"><button type="button" class="linkish" data-cm-del="{{ m.id }}">{{ tr('删除', 'Delete') }}</button></div>{% endif %}</li>{%- endmacro -%}
+{%- macro comment_item(m) -%}<li class="comment{% if m.mine %} is-mine{% endif %}" data-cm-id="{{ m.id }}"><div class="cm-head"><b>{{ m.name or (tr(pub.brand_zh, pub.brand_en) if m.badge == 'studio' else tr('匿名读者', 'Anonymous reader')) }}</b>{% if m.badge %}<span class="cm-badge cm-{{ m.badge }}">{{ {'studio': tr('工作室', 'Studio'), 'asker': tr('提问者本人', 'The asker'), 'member': tr('注册用户', 'Member')}[m.badge] }}</span>{% endif %}{% if m.mine %}<span class="cm-badge cm-mine">{{ tr('我的评价', 'Yours') }}</span>{% endif %}{% if m.status == 'pending' %}<span class="cm-badge cm-wait">{{ tr('审核中 · 仅你可见', 'In review · only you can see it') }}</span>{% elif m.status == 'hidden' %}<span class="cm-badge cm-wait">{{ tr('未公开 · 仅你可见', 'Not shown publicly') }}</span>{% endif %}<time datetime="{{ m.date }}">{{ m.date }}</time></div><p class="user-text">{{ m.text }}</p>{% if m.mine %}<div class="cm-tools"><button type="button" class="linkish" data-cm-del="{{ m.id }}">{{ tr('删除', 'Delete') }}</button></div>{% elif m.status == 'published' %}<div class="cm-tools"><button type="button" class="linkish" data-cm-report="{{ m.id }}">{{ tr('举报', 'Report') }}</button><button type="button" class="linkish" data-cm-block="{{ m.id }}">{{ tr('屏蔽此人', 'Block') }}</button></div>{% endif %}</li>{%- endmacro -%}
 {%- macro case_card(x) -%}
 <li><a class="case-card" href="{{ x.url }}" data-case="{{ x.slug }}"><span class="case-tags"><span class="tag tag-{{ x.topic }}">{{ x.topic_zh if zh else x.topic_en }}</span><span class="tag tag-source">{{ x.source_zh if zh else x.source_en }}</span></span><span class="case-q user-text">{{ x.question }}</span><span class="case-cards">{% for cd in x.cards %}<img src="{{ cd.thumb }}" alt="{{ cd.zh if zh else cd.en }}{{ tr('（逆位）', ' (reversed)') if cd.reversed }}" width="120" height="186" loading="lazy" decoding="async"{% if cd.reversed %} class="rev"{% endif %}>{% endfor %}</span><span class="case-meta">{{ x.spread.zh if zh else x.spread.en }} · {{ x.spread.count }} {{ tr('张', 'cards') }}{% if x.likes or x.comments %}<span class="case-counts">{% if x.likes %}<span aria-label="{{ tr('点赞', 'likes') }}">{{ icon('heart') }}{{ x.likes }}</span>{% endif %}{% if x.comments %}<span aria-label="{{ tr('评价', 'comments') }}">{{ icon('comment') }}{{ x.comments }}</span>{% endif %}</span>{% endif %}</span><span class="case-sum">{{ x.summary }}</span></a></li>
 {%- endmacro -%}
@@ -32,7 +32,7 @@
 </section>
 <section class="faq band" aria-labelledby="faq-title"><div class="section-head"><div><div class="eyebrow">FAQ</div><h2 id="faq-title">{{ tr('常见问题', 'Questions people ask') }}</h2></div></div>{% for f in faq %}<details><summary>{{ f.q_zh if zh else f.q_en }}</summary><p>{{ f.a_zh if zh else f.a_en }}</p></details>{% endfor %}</section>
 {%- endmacro -%}
-<html lang="{{ 'zh-CN' if zh else 'en' }}">
+<html lang="{{ 'zh-CN' if zh else 'en' }}"{% if app %} class="is-app is-{{ app }}"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -74,7 +74,12 @@
 <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/static/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.webmanifest{% if not zh %}?lang=en{% endif %}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="{{ s.brand_zh if zh else s.brand_en }}">
+{% if app_store and app_store.ios and not app %}<meta name="apple-itunes-app" content="app-id={{ app_store.ios }}">{% endif %}
 <link rel="preload" href="/static/fonts/ops-serif.woff" as="font" type="font/woff" crossorigin>
 <link rel="stylesheet" href="/static/style.css?v={{ asset_v }}">
 <link rel="preload" href="/api/catalog?v={{ catalog_v }}" as="fetch" crossorigin="anonymous">
@@ -206,6 +211,7 @@
 </main>
 <footer id="footer"><div>✦ {{ s.full_name }}<br>{{ tr('塔罗用于反思与探索，解读不代表事实或结果保证。', 'Tarot offers reflection, not evidence or guaranteed outcomes.') }}</div><div><a href="/cases">{{ tr('算牌案例', 'Examples') }}</a> · <a href="/contact">{{ tr('联系工作室', 'Contact studio') }}</a> · <a href="/terms">{{ tr('服务与隐私', 'Service & privacy') }}</a></div></footer>
 <div id="toast" role="status" aria-live="polite"></div>
+<script src="/static/native.js?v={{ asset_v }}" defer></script>
 <script src="/static/app.js?v={{ asset_v }}" defer></script>
 </body>
 </html>

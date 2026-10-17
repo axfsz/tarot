@@ -1,0 +1,22 @@
+<!doctype html>
+{%- set zh = lang != 'en' -%}
+<html lang="{{ 'zh-CN' if zh else 'en' }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#111b29">
+<title>{{ '暂时没有网络' if zh else 'You are offline' }} · {{ s.brand_zh if zh else s.brand_en }}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/offline.css">
+</head>
+<body>
+<main class="offline">
+<svg class="mark" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="#d5b988" stroke-opacity=".35"/><path d="M32 9L38 26L55 32L38 38L32 55L26 38L9 32L26 26Z" fill="#d5b988"/></svg>
+<p class="brand">{{ s.brand_zh }} · {{ s.brand_en }}</p>
+<h1>{{ '暂时没有网络' if zh else 'You are offline' }}</h1>
+<p>{{ '抽牌和解读需要联网。你的记录都安全地保存在服务器上，网络恢复后会接着显示。' if zh else 'Drawing and readings need a connection. Your readings are saved on the server and will be here when you are back online.' }}</p>
+<a class="retry" href="/">{{ '重新连接' if zh else 'Try again' }}</a>
+</main>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>暂时没有网络</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 40%,#1b2a3d,#111b29 70%);color:#f4efe6;font:16px/1.8 -apple-system,system-ui,'Segoe UI',sans-serif;padding:env(safe-area-inset-top) 24px env(safe-area-inset-bottom);text-align:center}
+main{max-width:420px}
+svg{width:84px;height:84px;margin-bottom:12px}
+.brand{color:#dcc296;font-size:12px;letter-spacing:3px;margin:0 0 18px}
+h1{font:400 28px/1.3 Georgia,'Songti SC',serif;letter-spacing:2px;margin:0 0 14px}
+p{color:#b2b9c1;margin:0 0 28px}
+button{font:inherit;background:#dcc296;color:#0d1520;font-weight:650;border:0;padding:12px 30px;border-radius:5px}
+.en{display:none}
+</style>
+</head>
+<body>
+<main>
+<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="27" fill="none" stroke="#d5b988" stroke-opacity=".35"/><path d="M32 9L38 26L55 32L38 38L32 55L26 38L9 32L26 26Z" fill="#d5b988"/></svg>
+<p class="brand">奥普塔罗工作室 · OPS TAROT STUDIO</p>
+<div class="zh"><h1>暂时没有网络</h1><p>抽牌和解读需要联网。你的记录都安全地保存在服务器上，网络恢复后会接着显示。</p></div>
+<div class="en"><h1>You are offline</h1><p>Drawing and readings need a connection. Your readings are saved and will be here when you are back online.</p></div>
+<button type="button" id="retry">重新连接 / Try again</button>
+</main>
+<script>
+if(!/^zh/i.test(navigator.language||'')){document.querySelector('.zh').style.display='none';document.querySelector('.en').style.display='block';document.documentElement.lang='en'}
+document.getElementById('retry').onclick=function(){location.href='https://honeytime.life/'};
+window.addEventListener('online',function(){location.href='https://honeytime.life/'});
+</script>
+</body>
+</html>

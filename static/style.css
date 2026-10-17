@@ -651,3 +651,14 @@ details.panel{padding:16px 20px;margin-bottom:10px}details.panel>summary{display
 @media(max-width:900px){.pub-accounts{grid-template-columns:1fr}}
 @media(max-width:760px){.jobs{grid-template-columns:1fr}.pub-sched select,.pub-sched input{flex-basis:100%}}
 .section-head .small-btn{font:14px/1.4 system-ui,-apple-system,'Segoe UI',sans-serif;padding:6px 14px;margin:0;flex:none}.draft .small a{overflow-wrap:anywhere}
+/* ---------- v0.9.0: mobile apps & installable web app ---------- */
+.cm-tools{display:flex;gap:14px}
+.app-panel{margin-top:36px}.app-panel h2{font-size:22px;margin-bottom:8px}.app-panel form{flex-wrap:wrap}.app-panel input[type=time]{width:auto;min-width:120px}
+.danger-zone{margin-top:40px;border:1px solid #5a3a3a;border-radius:8px;padding:12px 18px}.danger-zone summary{color:#ffb6a9}.danger-zone form{flex-wrap:wrap;margin-top:8px}.danger-zone input{max-width:280px}
+fieldset.app-rules{border:1px solid var(--line);border-radius:8px;padding:12px 18px;margin:18px 0}fieldset.app-rules legend{color:var(--gold);padding:0 6px}
+/* Inside the iOS/Android apps the page runs edge to edge: keep the header and footer clear of the status bar and home indicator. */
+html.is-app header{padding-top:max(16px,env(safe-area-inset-top),var(--safe-area-inset-top,0px))}
+html.is-app footer{padding-bottom:max(35px,calc(env(safe-area-inset-bottom) + 20px),calc(var(--safe-area-inset-bottom,0px) + 20px))}
+html.is-app #toast{bottom:max(25px,calc(env(safe-area-inset-bottom) + 16px))}
+html.is-app body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+@media (display-mode:standalone){header{padding-top:max(16px,env(safe-area-inset-top))}}

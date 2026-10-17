@@ -92,7 +92,7 @@ def _digest(*paths):
  return h.hexdigest()[:10]
 # Content-hash versions: browsers may cache versioned assets forever and every
 # deploy that changes a file automatically busts the cache (no manual ?v= bumps).
-ASSET_V=_digest('static/app.js','static/style.css')
+ASSET_V=_digest('static/app.js','static/native.js','static/style.css')
 # Hash the served catalog itself, so a swapped image path (e.g. a reviewed "-safe" card) also busts the cache.
 CATALOG_V=hashlib.sha256((json.dumps([CARDS,SPREADS],sort_keys=True,ensure_ascii=False)+_digest('static/app.js')).encode()).hexdigest()[:10]
 CATALOG_JSON=json.dumps(dict(version=CATALOG_V,spreads=SPREADS,cards=CARDS),ensure_ascii=False,separators=(',',':'))
@@ -151,7 +151,7 @@ def compress(r):
 @app.after_request
 def headers(r):
  r.headers['X-Content-Type-Options']='nosniff';r.headers['X-Frame-Options']='DENY';r.headers['Referrer-Policy']='strict-origin-when-cross-origin'
- r.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+ r.headers['Content-Security-Policy']="default-src 'self'; script-src 'self'"+(" 'unsafe-inline'" if app_platform()=='android' else '')+"; style-src 'self'; img-src 'self' https: data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
  r.headers['Permissions-Policy']='camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
  r.headers['Cross-Origin-Opener-Policy']='same-origin'
  if request.is_secure or app.config['SESSION_COOKIE_SECURE']:r.headers['Strict-Transport-Security']='max-age=31536000'
@@ -166,6 +166,24 @@ def headers(r):
  compress(r)
  return r
 GUEST_AI_LIMIT=int(os.getenv('GUEST_AI_LIMIT','1'))
+# ================= Mobile apps (v0.9.0) =================
+# The iOS and Android apps are a Capacitor shell around this same site (see mobile/). The shell adds
+# "OpsTarotApp/<ios|android>" to the User-Agent, so the server can apply the app-store rules below.
+APP_UA=re.compile(r'\bOpsTarotApp/(ios|android)\b')
+APP_ID=os.getenv('APP_ID','life.honeytime.tarot')
+def app_platform():
+ try:m=APP_UA.search(request.headers.get('User-Agent',''))
+ except RuntimeError:return ''
+ return m.group(1) if m else ''
+def for_platform(s):
+ # Apple (guideline 3.1.1) requires in-app purchase for digital content such as an AI reading.
+ # Inside the iOS app the AI reading is therefore never charged: it is free ('free', default) or
+ # unavailable ('off'). Payment details for personal readings are shown only if the studio enables it.
+ if app_platform()!='ios':return s
+ s=dict(s,charge_ai=False)
+ if not s.get('app_ios_payments'):s['payments']=[]
+ return s
+def ios_hides_payments(c):return app_platform()=='ios' and not settings(c).get('app_ios_payments')
 def current_user(c):
  u=get(c,'user:'+session.get('uid',''))
  return u if u and session.get('version',0)==u.get('version',0) else None
@@ -380,8 +398,10 @@ def is_mine(y,me):
  return bool((y.get('who') and y['who']==me['key']) or (me['uid'] and y.get('uid')==me['uid']))
 def comment_view(c,slug):
  # Everyone sees published comments; the author also sees their own comments that are still in review.
- me=viewer(c);everything=case_comments(c,slug,None)
- return dict(items=[comment_public(y,me) for y in everything if y['status']=='published'],
+ # Comments a visitor reported, and authors they blocked, are hidden for that visitor (v0.9.0).
+ me=viewer(c);everything=case_comments(c,slug,None);b=blocklist(c)
+ shown=lambda y:not(y['id'] in b['comments'] or (y.get('who') and y['who'] in b['who']) or (y.get('uid') and y['uid'] in b['uid']))
+ return dict(items=[comment_public(y,me) for y in everything if y['status']=='published' and (is_mine(y,me) or shown(y))],
   mine=[comment_public(y,me) for y in everything if y['status']!='published' and is_mine(y,me)],liked=has_liked(c,slug))
 def refresh_counts(c,case):
  case['comments']=len(case_comments(c,case['slug']));put(c,case['id'],'case',case['owner'],case)
@@ -416,7 +436,7 @@ def page_response(page,status=200,**extra):
  base=site_url();path=extra.pop('path',meta['path']);canonical=base+path+('?lang=en' if lang=='en' else '')
  noindex=status!=200 or page in ('admin','setup') or extra.pop('noindex',False);has_en=extra.pop('has_en',True)
  og_image=seo.get('og_image') or base+'/static/og-cover.jpg'
- html=render_template('index.html',page=page,lang=lang,title=title,description=description,canonical=canonical,site_url=base,path=path,asset_v=ASSET_V,catalog_v=CATALOG_V,s=s,pub=public_settings(s),faq=FAQ,faq_ld=[{'@type':'Question','name':f['q_'+lang],'acceptedAnswer':{'@type':'Answer','text':f['a_'+lang]}} for f in FAQ],cards=CARDS,card_slugs=CARD_SLUG,spreads=SPREADS,strip=strip,topics=TOPICS,sources=SOURCES,noindex=noindex,has_en=has_en,verify=seo.get('verify') or {},og_image=og_image,**extra)
+ html=render_template('index.html',page=page,lang=lang,title=title,description=description,canonical=canonical,site_url=base,path=path,asset_v=ASSET_V,catalog_v=CATALOG_V,s=s,pub=public_settings(for_platform(s)),app=app_platform(),app_store=dict(ios=os.getenv('APP_IOS_STORE_ID','').strip()),faq=FAQ,faq_ld=[{'@type':'Question','name':f['q_'+lang],'acceptedAnswer':{'@type':'Answer','text':f['a_'+lang]}} for f in FAQ],cards=CARDS,card_slugs=CARD_SLUG,spreads=SPREADS,strip=strip,topics=TOPICS,sources=SOURCES,noindex=noindex,has_en=has_en,verify=seo.get('verify') or {},og_image=og_image,**extra)
  return Response(html,status=status,mimetype='text/html')
 @app.get('/')
 def index():return page_response('home')
@@ -469,7 +489,12 @@ def sitemap():
 @app.get('/manifest.webmanifest')
 def manifest():
  with engine.connect() as c:s=settings(c)
- return Response(json.dumps(dict(name=f"{s['brand_en']} · {s['brand_zh']}",short_name=s['brand_en'][:12],start_url='/',display='standalone',background_color='#111b29',theme_color='#111b29',lang='zh-CN',icons=[dict(src='/static/icon-192.png',sizes='192x192',type='image/png'),dict(src='/static/icon-512.png',sizes='512x512',type='image/png'),dict(src='/static/favicon.svg',sizes='any',type='image/svg+xml')]),ensure_ascii=False),mimetype='application/manifest+json')
+ en=page_lang()=='en';name=s['brand_en'] if en else s['brand_zh']
+ icons=[dict(src='/static/icon-192.png',sizes='192x192',type='image/png'),dict(src='/static/icon-512.png',sizes='512x512',type='image/png'),dict(src='/static/icon-maskable-512.png',sizes='512x512',type='image/png',purpose='maskable'),dict(src='/static/favicon.svg',sizes='any',type='image/svg+xml')]
+ shortcuts=[dict(name='今日一牌' if not en else 'Card of the day',url='/?daily=1',icons=[icons[0]]),dict(name='AI 塔罗解读' if not en else 'AI reading',url='/ai',icons=[icons[0]]),dict(name='预约真人咨询' if not en else 'Book a reader',url='/human',icons=[icons[0]])]
+ m=dict(id='/',name=f"{s['brand_en']} · {s['brand_zh']}",short_name=name[:12],description=s['tagline_en'] if en else s['tagline_zh'],start_url='/',scope='/',display='standalone',orientation='portrait',background_color='#111b29',theme_color='#111b29',lang='en' if en else 'zh-CN',categories=['lifestyle','entertainment'],icons=icons,shortcuts=shortcuts)
+ if os.getenv('APP_ANDROID_PACKAGE') or os.getenv('APP_ANDROID_SHA256'):m['related_applications']=[dict(platform='play',id=os.getenv('APP_ANDROID_PACKAGE',APP_ID))]
+ return Response(json.dumps(m,ensure_ascii=False),mimetype='application/manifest+json')
 @app.get('/api/catalog')
 def catalog():
  # Static deck and spread data: large, identical for everyone, cacheable by version.
@@ -480,7 +505,7 @@ def bootstrap():
  with engine.begin() as c:
   s=settings(c);u=current_user(c);installed=bool(get(c,'installed'));strip=strip_cases(c,s) if installed else []
  user=dict(id=u['id'],username=u['username'],admin=bool(u.get('admin')),guest=bool(u.get('guest')),email=u.get('email','')) if u else None
- return jsonify(csrf=session['csrf'],installed=installed,user=user,settings=public_settings(s),faq=FAQ,cases=strip,topics=TOPICS,sources=SOURCES,catalog_version=CATALOG_V)
+ return jsonify(csrf=session['csrf'],installed=installed,user=user,settings=dict(public_settings(for_platform(s)),app=app_platform()),faq=FAQ,cases=strip,topics=TOPICS,sources=SOURCES,catalog_version=CATALOG_V)
 @app.post('/api/setup')
 def setup():
  d=body();token=os.getenv('SETUP_TOKEN','')
@@ -500,7 +525,9 @@ def new_user(d,admin=False):
  email=textval(d,'email',200).lower()
  if email and not re.fullmatch(EMAIL_RE,email):raise Problem('Invalid email / 邮箱格式无效')
  id=hashlib.sha256(name.lower().encode()).hexdigest()[:32]
- return dict(id=id,username=name,password=generate_password_hash(pw),admin=admin,created=now(),email=email)
+ # A random session version: if a deleted account's name is registered again (same id), sessions and
+ # reset links of the old account can never sign in to the new one (v0.9.0).
+ return dict(id=id,username=name,password=generate_password_hash(pw),admin=admin,created=now(),email=email,version=secrets.randbelow(2**31)+1)
 def adopt_guest(c,guest_id,user_id):
  # Move a trial visitor's readings and orders into the account they just opened.
  g=get(c,'user:'+guest_id) if guest_id else None
@@ -592,7 +619,9 @@ def history(u):
    if x['status']!='withdrawn':mine[x.get('booking') or x['reading']]=dict(slug=x['slug'],status=x['status'])
   readings=[dict(public_read(r),share=mine.get(r['id'])) for r in rows(c,'reading',u['id'])]
   bookings=[dict(b,share=mine.get(b['id'])) for b in rows(c,'booking',u['id'])]
-  return jsonify(readings=newest(readings),bookings=newest(bookings),orders=newest(rows(c,'order',u['id'])))
+  orders=rows(c,'order',u['id'])
+  if ios_hides_payments(c):orders=[dict(o,payments=[],pay_elsewhere=True) for o in orders]
+  return jsonify(readings=newest(readings),bookings=newest(bookings),orders=newest(orders))
 def make_order(c,u,target,amount,s,kind):
  id='order:'+secrets.token_hex(12);r=dict(id=id,owner=u['id'],target=target,kind=kind,amount=money(amount),currency=s['currency'],status='pending',created=now(),payments=[p for p in s['payments'] if p.get('enabled')])
  put(c,id,'order',u['id'],r);return id
@@ -614,7 +643,8 @@ def create_read(u):
  with lock,engine.begin() as c:
   if not throttle(c,'create:'+u['id'],15):raise Problem('Too many requests / 请稍后重试',429)
   s=settings(c);r=dict(id=id,owner=u['id'],created=now(),question=question,background=background,period=period,option_a=textval(d,'option_a',200),option_b=textval(d,'option_b',200),option_c=textval(d,'option_c',200),spread=sp,lang='en' if d.get('lang')=='en' else 'zh',mode=mode,cards=[],status='drawing',reports=[],**drawing)
-  if mode=='ai' and s['billing'] and s['charge_ai']:
+  if mode=='ai' and app_platform()=='ios' and s['billing'] and s['charge_ai'] and s.get('app_ios_ai')=='off':raise Problem('AI readings are available on the website / AI 解读请在网站上使用',403,'ios_ai_off')
+  if mode=='ai' and s['billing'] and for_platform(s)['charge_ai']:
    r['order']=make_order(c,u,id,s['ai_price'],s,'ai');r['status']='payment'
   put(c,id,'reading',u['id'],r);day=stats_day(c,s);track(c,'reading_created',day=day);mark(c,'rv',day)
  return jsonify(public_read(r))
@@ -842,7 +872,7 @@ def delete_own_comment(slug,cid):
 @auth(True)
 def admin_comments(u):
  with engine.begin() as c:cases={x['slug']:x for x in rows(c,'case')};items=newest(rows(c,'comment'))
- return jsonify(items=[dict(comment_public(y),status=y['status'],slug=y['slug'],created=y['created'],question=cases.get(y['slug'],{}).get('question',''),flags=y.get('flags') or {'pii':[],'banned':[]}) for y in items[:500]])
+ return jsonify(items=[dict(comment_public(y),status=y['status'],slug=y['slug'],created=y['created'],question=cases.get(y['slug'],{}).get('question',''),flags=y.get('flags') or {'pii':[],'banned':[]},reports=[dict(reason=x.get('reason','other'),at=x.get('at','')) for x in y.get('reports',[])]) for y in items[:500]])
 @app.put('/api/admin/comments/<cid>')
 @auth(True)
 def moderate_comment(u,cid):
@@ -961,6 +991,8 @@ def update_settings(u):
   if not isinstance(s['packages'],list) or len(s['packages'])>10:raise Problem('Invalid packages')
   s['cases_ab_test']=bool(s.get('cases_ab_test'))
   if s.get('comment_review','guests') not in REVIEW_MODES:raise Problem('Invalid comment review mode')
+  if s.get('app_ios_ai','free') not in ('free','off'):raise Problem('Invalid iOS AI mode')
+  s['app_ios_payments']=bool(s.get('app_ios_payments'))
   for p in s['packages']:
    for k in ('delivery_zh','delivery_en'):p[k]=str(p.get(k,''))[:60]
    p['price']=money(p.get('price',0))
@@ -1787,6 +1819,114 @@ def cleanup():
   for rid,payload in c.execute(select(records.c.id,records.c.payload).where(records.c.kind=='reset')).all():
    if json.loads(payload).get('exp',0)<time.time():c.execute(delete(records).where(records.c.id==rid))
 _last_daily=[0.]
+# ================= Mobile apps & app-store requirements (v0.9.0) =================
+# --- deep links: Android App Links and iOS Universal Links ---
+# Both files are only served once the matching value is configured in .env, so a half-set-up
+# app never claims the domain.
+@app.get('/.well-known/assetlinks.json')
+def assetlinks():
+ fps=[x.strip().upper() for x in os.getenv('APP_ANDROID_SHA256','').split(',') if x.strip()]
+ if not fps:abort(404)
+ return jsonify([dict(relation=['delegate_permission/common.handle_all_urls'],target=dict(namespace='android_app',package_name=os.getenv('APP_ANDROID_PACKAGE',APP_ID),sha256_cert_fingerprints=fps))])
+@app.get('/.well-known/apple-app-site-association')
+@app.get('/apple-app-site-association')
+def apple_app_site_association():
+ team=os.getenv('APP_IOS_TEAM_ID','').strip().upper()
+ if not re.fullmatch(r'[A-Z0-9]{10}',team):abort(404)
+ appid=f"{team}.{os.getenv('APP_IOS_BUNDLE',APP_ID)}"
+ parts=[{'/':'/api/*','exclude':True},{'/':'/admin*','exclude':True},{'/':'/setup','exclude':True},{'/':'/static/*','exclude':True},{'/':'/*'}]
+ return jsonify(applinks=dict(details=[dict(appIDs=[appid],components=parts)]),webcredentials=dict(apps=[appid]))
+# --- installable web app (PWA): service worker and offline page ---
+@app.get('/sw.js')
+def service_worker():
+ js=(ROOT/'static/sw.js').read_text().replace('__VERSION__',ASSET_V)
+ r=Response(js,mimetype='text/javascript');r.headers['Cache-Control']='no-cache';r.headers['Service-Worker-Allowed']='/'
+ return r
+@app.get('/offline')
+def offline_page():
+ with engine.connect() as c:s=settings(c)
+ return Response(render_template('offline.html',s=s,lang=page_lang(),asset_v=ASSET_V),mimetype='text/html')
+# --- account deletion (Apple 5.1.1(v), Google Play account-deletion policy) ---
+def delete_user_data(c,u):
+ # Personal content is deleted. Bookings and payment records are kept for the studio's accounts,
+ # detached from the account and stripped of contact details.
+ gone='deleted:'+hashlib.sha256(f"{SECRET}|{u['id']}".encode()).hexdigest()[:16]
+ cancelled=[]
+ for r in rows(c,'reading',u['id']):c.execute(delete(records).where(records.c.id==r['id']))
+ for x in rows(c,'case',u['id']):
+  if x['status']!='withdrawn':withdraw_case(c,x)
+  x=get(c,x['id']);x['owner']=gone;put(c,x['id'],'case',gone,x)
+ for b in rows(c,'booking',u['id']):
+  if b['status'] in ('requested','confirmed','awaiting_payment'):b['status']='cancelled';cancelled.append(b['id'])
+  b.update(owner=gone,contacts={},contact='',account_deleted=now());put(c,b['id'],'booking',gone,b)
+ for o in rows(c,'order',u['id']):o['owner']=gone;put(c,o['id'],'order',gone,o)
+ touched=set()
+ for y in rows(c,'comment'):
+  if y.get('uid')==u['id']:c.execute(delete(records).where(records.c.id==y['id']));touched.add(y['slug'])
+ for slug in touched:
+  x=get(c,'case:'+slug)
+  if x:refresh_counts(c,x)
+ for rid,payload in c.execute(select(records.c.id,records.c.payload).where(records.c.kind=='reset')).all():
+  if json.loads(payload).get('uid')==u['id']:c.execute(delete(records).where(records.c.id==rid))
+ c.execute(delete(records).where(records.c.id=='user:'+u['id']))
+ audit(c,gone,'account.delete')
+ return cancelled
+@app.post('/api/account/delete')
+@auth()
+def delete_account(u):
+ if u.get('admin'):raise Problem('Studio admin accounts cannot be deleted here / 管理员账号不能在这里注销',403)
+ with lock,engine.begin() as c:allowed=throttle(c,'delete:'+request.remote_addr,5)
+ if not allowed:raise Problem('Try later / 请稍后再试',429)
+ # 403 rather than 401: a wrong password must not look like a signed-out session.
+ if not check_password_hash(u['password'],str(body().get('password',''))):raise Problem('Incorrect password / 密码错误',403)
+ with lock,engine.begin() as c:cancelled=delete_user_data(c,u)
+ session.clear()
+ if cancelled:notify_admin('用户注销账号，预约已取消 / Account deleted, bookings cancelled','用户已注销账号，以下预约已自动取消：\n'+'\n'.join(cancelled)+f'\n后台：{site_url()}/admin')
+ return jsonify(ok=True,cancelled=len(cancelled))
+# --- user-generated content: report and block (Apple 1.2) ---
+REPORT_REASONS=('spam','abuse','privacy','other');REPORT_HIDE=3
+def block_id(c):return 'block:'+reactor_key(c)
+def blocklist(c):return get(c,block_id(c)) or dict(who=[],uid=[],comments=[])
+def comment_for(c,slug,cid):
+ y=get(c,'comment:'+cid) if re.fullmatch(r'[0-9a-f]{12}',cid or '') else None
+ if not y or y['slug']!=slug:raise Problem('Not found / 未找到',404)
+ return y
+def remember_block(c,b):
+ for k in b:b[k]=b[k][-500:]
+ put(c,block_id(c),'block','system',b)
+@app.post('/api/cases/<slug>/comments/<cid>/report')
+def report_comment(slug,cid):
+ reason=textval(body(),'reason',20)
+ if reason not in REPORT_REASONS:reason='other'
+ with lock,engine.begin() as c:
+  published_case(c,slug);y=comment_for(c,slug,cid);me=viewer(c)
+  if is_mine(y,me):raise Problem('This is your own comment / 这是你自己的评价')
+  if not throttle(c,'report:'+request.remote_addr,20):raise Problem('Too many requests / 请稍后重试',429)
+  reps=y.setdefault('reports',[])
+  if me['key'] not in [x.get('by') for x in reps]:reps.append(dict(by=me['key'],reason=reason,at=now()))
+  held=y['status']=='published' and len(reps)>=REPORT_HIDE
+  if held:y['status']='pending'  # enough reports: taken down until the studio reviews it
+  put(c,y['id'],'comment',slug,y)
+  if held:refresh_counts(c,get(c,'case:'+slug))
+  b=blocklist(c)
+  if y['id'] not in b['comments']:b['comments'].append(y['id'])
+  remember_block(c,b)
+ notify_admin('评价被举报 / A comment was reported',f"案例 {slug} 的一条评价被举报（{reason}），累计 {len(reps)} 次{'，已自动下线待审核' if held else ''}。\n后台：{site_url()}/admin")
+ return jsonify(ok=True)
+@app.post('/api/cases/<slug>/comments/<cid>/block')
+def block_author(slug,cid):
+ with lock,engine.begin() as c:
+  y=comment_for(c,slug,cid);me=viewer(c)
+  if is_mine(y,me):raise Problem('This is your own comment / 这是你自己的评价')
+  b=blocklist(c)
+  if y.get('who') and y['who'] not in b['who']:b['who'].append(y['who'])
+  if y.get('uid') and y['uid'] not in b['uid']:b['uid'].append(y['uid'])
+  remember_block(c,b)
+ return jsonify(ok=True)
+@app.post('/api/blocks/clear')
+def clear_blocks():
+ with lock,engine.begin() as c:c.execute(delete(records).where(records.c.id==block_id(c)))
+ return jsonify(ok=True)
 def worker():
  while True:
   try:cleanup()
