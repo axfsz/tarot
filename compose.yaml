@@ -42,6 +42,10 @@ services:
       AI_OUTPUT_PRICE: ${AI_OUTPUT_PRICE:-}
       AI_MAX_TOKENS: ${AI_MAX_TOKENS:-}
       PUBLISHER_URL: http://publisher:8200
+      # v0.9.0 mobile apps (deep links + iOS Smart App Banner); all optional, see mobile/README.md
+      APP_ANDROID_SHA256: ${APP_ANDROID_SHA256:-}
+      APP_IOS_TEAM_ID: ${APP_IOS_TEAM_ID:-}
+      APP_IOS_STORE_ID: ${APP_IOS_STORE_ID:-}
     ports:
       - '0.0.0.0:${APP_PORT:-8180}:8000'
     volumes:

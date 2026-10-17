@@ -492,7 +492,7 @@ def manifest():
  en=page_lang()=='en';name=s['brand_en'] if en else s['brand_zh']
  icons=[dict(src='/static/icon-192.png',sizes='192x192',type='image/png'),dict(src='/static/icon-512.png',sizes='512x512',type='image/png'),dict(src='/static/icon-maskable-512.png',sizes='512x512',type='image/png',purpose='maskable'),dict(src='/static/favicon.svg',sizes='any',type='image/svg+xml')]
  shortcuts=[dict(name='今日一牌' if not en else 'Card of the day',url='/?daily=1',icons=[icons[0]]),dict(name='AI 塔罗解读' if not en else 'AI reading',url='/ai',icons=[icons[0]]),dict(name='预约真人咨询' if not en else 'Book a reader',url='/human',icons=[icons[0]])]
- m=dict(id='/',name=f"{s['brand_en']} · {s['brand_zh']}",short_name=name[:12],description=s['tagline_en'] if en else s['tagline_zh'],start_url='/?source=pwa',scope='/',display='standalone',orientation='portrait',background_color='#111b29',theme_color='#111b29',lang='en' if en else 'zh-CN',categories=['lifestyle','entertainment'],icons=icons,shortcuts=shortcuts)
+ m=dict(id='/',name=f"{s['brand_en']} · {s['brand_zh']}",short_name=name[:12],description=s['tagline_en'] if en else s['tagline_zh'],start_url='/',scope='/',display='standalone',orientation='portrait',background_color='#111b29',theme_color='#111b29',lang='en' if en else 'zh-CN',categories=['lifestyle','entertainment'],icons=icons,shortcuts=shortcuts)
  if os.getenv('APP_ANDROID_PACKAGE') or os.getenv('APP_ANDROID_SHA256'):m['related_applications']=[dict(platform='play',id=os.getenv('APP_ANDROID_PACKAGE',APP_ID))]
  return Response(json.dumps(m,ensure_ascii=False),mimetype='application/manifest+json')
 @app.get('/api/catalog')

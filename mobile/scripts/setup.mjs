@@ -119,6 +119,8 @@ ${HOSTS.map(h => `\t\t<string>applinks:${h}</string>`).join('\n')}
     must(x, /INFOPLIST_FILE = App\/Info\.plist;/, 'INFOPLIST_FILE in project.pbxproj');
     if (!x.includes('CODE_SIGN_ENTITLEMENTS'))
       x = x.replace(/(\n(\s*)INFOPLIST_FILE = App\/Info\.plist;)/g, '\n$2CODE_SIGN_ENTITLEMENTS = App/App.entitlements;$1');
+    // iPhone only: iPads still run it (in iPhone mode), and the store needs no iPad screenshots.
+    x = x.replace(/TARGETED_DEVICE_FAMILY = "?[0-9,]+"?;/g, 'TARGETED_DEVICE_FAMILY = 1;');
     x = x.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${versionName};`)
          .replace(/CURRENT_PROJECT_VERSION = [^;]+;/g, `CURRENT_PROJECT_VERSION = ${versionCode};`);
     const team = (process.env.APPLE_TEAM_ID || '').trim().toUpperCase();
