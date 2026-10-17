@@ -5,9 +5,21 @@
 (function(){
 'use strict';
 const cap=window.Capacitor;
-const isApp=!!(cap&&typeof cap.isNativePlatform==='function'&&cap.isNativePlatform());
-const platform=isApp?cap.getPlatform():'web';
-const P=isApp?(cap.Plugins||{}):{};
+const uaApp=(navigator.userAgent.match(/\bOpsTarotApp\/(ios|android)\b/)||[])[1];
+const isApp=!!(cap&&(typeof cap.isNativePlatform==='function'?cap.isNativePlatform():uaApp));
+const platform=isApp?((typeof cap.getPlatform==='function'&&cap.getPlatform())||uaApp):'web';
+// The page is loaded from the server and never imports @capacitor/* packages, so resolve each
+// native plugin through whatever the injected bridge offers: Plugins, registerPlugin, or raw calls.
+function plugin(name){
+ if(typeof cap.isPluginAvailable==='function'&&!cap.isPluginAvailable(name))return undefined;
+ if(cap.Plugins&&cap.Plugins[name])return cap.Plugins[name];
+ if(typeof cap.registerPlugin==='function'){try{return cap.registerPlugin(name)}catch(e){}}
+ if(typeof cap.nativePromise!=='function')return undefined;
+ return new Proxy({},{get:(_,method)=>method==='addListener'
+  ?(eventName,cb)=>{const id=cap.nativeCallback(name,'addListener',{eventName},cb);return Promise.resolve({remove:()=>cap.nativePromise(name,'removeListener',{callbackId:id,eventName})})}
+  :(opts)=>cap.nativePromise(name,method,opts||{})})}
+const P={};
+if(isApp)for(const n of ['App','Browser','Share','Haptics','LocalNotifications'])P[n]=plugin(n);
 const zh=()=>document.documentElement.lang!=='en';
 const tt=(a,b)=>zh()?a:b;
 const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};

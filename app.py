@@ -525,7 +525,9 @@ def new_user(d,admin=False):
  email=textval(d,'email',200).lower()
  if email and not re.fullmatch(EMAIL_RE,email):raise Problem('Invalid email / 邮箱格式无效')
  id=hashlib.sha256(name.lower().encode()).hexdigest()[:32]
- return dict(id=id,username=name,password=generate_password_hash(pw),admin=admin,created=now(),email=email)
+ # A random session version: if a deleted account's name is registered again (same id), sessions and
+ # reset links of the old account can never sign in to the new one (v0.9.0).
+ return dict(id=id,username=name,password=generate_password_hash(pw),admin=admin,created=now(),email=email,version=secrets.randbelow(2**31)+1)
 def adopt_guest(c,guest_id,user_id):
  # Move a trial visitor's readings and orders into the account they just opened.
  g=get(c,'user:'+guest_id) if guest_id else None
@@ -1864,6 +1866,8 @@ def delete_user_data(c,u):
  for slug in touched:
   x=get(c,'case:'+slug)
   if x:refresh_counts(c,x)
+ for rid,payload in c.execute(select(records.c.id,records.c.payload).where(records.c.kind=='reset')).all():
+  if json.loads(payload).get('uid')==u['id']:c.execute(delete(records).where(records.c.id==rid))
  c.execute(delete(records).where(records.c.id=='user:'+u['id']))
  audit(c,gone,'account.delete')
  return cancelled

@@ -6,6 +6,8 @@ Ops Global Online Tarot Studio — 全球在线塔罗咨询与教学
 
 ## 当前交付
 
+> v0.9.0：**iOS / 安卓 App**（`mobile/` 目录，Capacitor 8 外壳加载 honeytime.life，网站更新 App 即同步），含每日一牌本地提醒、原生分享、抽牌触感、点网址打开 App、离线页；为上架补齐注销账号、评价举报与屏蔽、iOS 收费规则；网站可安装（PWA），详见 `CHANGELOG_v0.9.0.md` 与 `mobile/README.md`。
+
 > v0.8.1：小红书 / 微信视频号 / TikTok **定时自动发帖**（独立的 `publisher` 容器，扫码登录一次，到点自动发布；登录失效、平台风控或连续失败时自动改为邮件提醒手动发），详见 `CHANGELOG_v0.8.1.md`。
 
 > v0.8.0：数据看板改为漏斗图 + 趋势图，新增访客地区、流量来源、渠道转化、设备与语言分析；新增“SEO 与收录”（78 张牌独立牌义页、页面标题描述、验证码、IndexNow 推送、AI 补全牌义）和“自动营销”（AI 社媒文案草稿、案例发布/每日一牌自动生成、UTM 推广链接），详见 `CHANGELOG_v0.8.0.md`。

@@ -143,13 +143,15 @@ def test_account_deletion_removes_personal_data(admin):
  for i in range(3):hr=post(u,f"/readings/{hr['id']}/draw",dict(index=0,expected=i)).json
  bk=post(u,'/bookings',dict(reading=hr['id'],package='text',phone='+60123456789',email='leaver@example.com',timezone='Asia/Kuala_Lumpur',date='2030-01-02',time_slot='10:00')).json
  assert bk['status']=='requested'
+ phone=client(ua='second-phone');assert post(phone,'/login',dict(username='leaver',password='eight888')).status_code==200
+ uid=m.hashlib.sha256(b'leaver').hexdigest()[:32]
+ with m.engine.begin() as c:m.put(c,'reset:'+m.hashlib.sha256(b'old-link').hexdigest(),'reset','system',dict(uid=uid,exp=m.time.time()+3600))
  assert post(u,'/account/delete',dict(password='wrong-pass')).status_code==403      # 403, not 401: stays signed in
  assert u.get('/api/bootstrap').json['user']['username']=='leaver'
  assert post(admin,'/account/delete',dict(password='test-password-123')).status_code==403   # admins cannot
  r=post(u,'/account/delete',dict(password='eight888'))
  assert r.status_code==200 and r.json=={'ok':True,'cancelled':1}
  assert u.get('/api/bootstrap').json['user'] is None
- uid=m.hashlib.sha256(b'leaver').hexdigest()[:32]
  with m.engine.begin() as c:
   assert m.get(c,'user:'+uid) is None and m.get(c,rid) is None and m.get(c,hr['id']) is None
   assert m.get(c,'comment:'+cid) is None and m.rows(c,'reading',uid)==[] and m.rows(c,'booking',uid)==[]
@@ -159,6 +161,9 @@ def test_account_deletion_removes_personal_data(admin):
  assert client().get(f'/cases/{slug}').status_code==410
  again=member('leaver')   # the name can be registered again, and starts empty
  assert again.get('/api/history').json['readings']==[] and again.get('/api/history').json['bookings']==[]
+ # the old account's other sessions and reset links never reach the new account with the same name
+ assert phone.get('/api/bootstrap').json['user'] is None
+ assert post(client(),'/password/reset',dict(token='old-link',password='taken-over-1')).status_code==400
  assert post(client(),'/account/delete',dict(password='x')).status_code==401
 
 def test_settings_defaults_and_admin_form():
