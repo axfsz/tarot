@@ -1,0 +1,31 @@
+{
+  "name": "ops-tarot-app",
+  "version": "0.9.0",
+  "private": true,
+  "description": "iOS / Android app shell for Ops Tarot Studio (honeytime.life), built with Capacitor",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "ios": "node scripts/setup.mjs ios && cap open ios",
+    "android": "node scripts/setup.mjs android && cap open android",
+    "build:android": "node scripts/setup.mjs android && cd android && ./gradlew --no-daemon bundleRelease assembleRelease",
+    "build:android:debug": "node scripts/setup.mjs android && cd android && ./gradlew --no-daemon assembleDebug"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capacitor/splash-screen": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.0.0"
+  }
+}

@@ -1,0 +1,125 @@
+# Tests the site and builds the mobile apps on every push to main (and on demand).
+# Android: a debug APK you can install directly, plus a signed release APK/AAB when the
+#          ANDROID_KEYSTORE_* secrets are set (Settings → Secrets and variables → Actions).
+# iOS:     compiles the app for the simulator to prove the project builds. Store builds are
+#          archived and uploaded from Xcode on your Mac (see mobile/README.md).
+name: CI
+on:
+  push:
+    branches: [main, 'ci/**']
+    tags: ['app-v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12', cache: pip }
+      - name: Install
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null
+          pip install -q -r requirements.txt -r publisher/requirements.txt pytest
+          python -m playwright install --with-deps chromium >/dev/null
+      - name: Run tests
+        run: |
+          set -o pipefail
+          python -m pytest -q -p no:cacheprovider 2>&1 | tee pytest.log
+      - name: Report failures
+        if: failure()
+        run: |
+          msg=$(grep -E "^(FAILED|ERROR)|Error|assert" pytest.log | head -60 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=pytest::${msg}"
+          tail -n 40 pytest.log | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=pytest-tail::{}"
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults: { run: { working-directory: mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - name: Generate and patch the Android project
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tail -5
+          node scripts/setup.mjs android 2>&1 | tee ../setup.log
+      - name: Release keystore (optional)
+        env: { KEYSTORE_B64: '${{ secrets.ANDROID_KEYSTORE_BASE64 }}' }
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"; echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"; echo "signed=1" >> "$GITHUB_ENV"; fi
+      - name: Build
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          cd android
+          tasks="assembleDebug"; [ "${signed:-}" = 1 ] && tasks="assembleDebug assembleRelease bundleRelease"
+          ./gradlew --no-daemon $tasks 2>&1 | tee ../../gradle.log
+          mkdir -p ../../out
+          cp app/build/outputs/apk/debug/app-debug.apk ../../out/ops-tarot-debug.apk
+          if [ "${signed:-}" = 1 ]; then
+            cp app/build/outputs/apk/release/app-release.apk ../../out/ops-tarot.apk
+            cp app/build/outputs/bundle/release/app-release.aab ../../out/ops-tarot.aab
+            keytool -printcert -jarfile ../../out/ops-tarot.apk | grep -i "SHA256:" | head -1 | sed 's/^\s*SHA256: //' > ../../out/SHA256.txt
+            echo "::notice title=APP_ANDROID_SHA256::$(cat ../../out/SHA256.txt)"
+          fi
+          ls -la ../../out
+      - uses: actions/upload-artifact@v4
+        with: { name: android-app, path: out/, if-no-files-found: error }
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/app-v')
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh release create "$GITHUB_REF_NAME" ../out/* --title "奥普塔罗 App $GITHUB_REF_NAME" --notes "安卓安装包：下载 ops-tarot.apk（已签名）在手机上打开即可安装。" || gh release upload "$GITHUB_REF_NAME" ../out/* --clobber
+      - name: Report failures
+        if: failure()
+        working-directory: .
+        run: |
+          for f in setup.log gradle.log; do [ -f $f ] || continue
+            grep -E "error|Error|FAIL|What went wrong|✗" $f | head -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=$f::{}"
+            tail -n 30 $f | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=$f-tail::{}"
+          done
+
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    defaults: { run: { working-directory: mobile } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Select Xcode 26
+        run: |
+          x=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$x" ] || { echo "::error title=xcode::Xcode 26 is not installed on this runner. Installed: $(ls -d /Applications/Xcode*.app | xargs -n1 basename | tr '\n' ' ')"; exit 1; }
+          sudo xcode-select -s "$x"; xcodebuild -version
+      - name: Generate and patch the iOS project
+        run: |
+          set -o pipefail
+          npm install --no-audit --no-fund 2>&1 | tail -5
+          node scripts/setup.mjs ios 2>&1 | tee ../setup.log
+      - name: Build for the simulator (no signing)
+        run: |
+          set -o pipefail
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee ../xcode.log | grep -E "error:|warning: .*deprecated|BUILD" || true
+          grep -q "BUILD SUCCEEDED" ../xcode.log
+      - name: Report failures
+        if: failure()
+        working-directory: .
+        run: |
+          for f in setup.log xcode.log; do [ -f $f ] || continue
+            grep -E "error:|Error|✗" $f | head -40 | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=$f::{}"
+            tail -n 30 $f | sed ':a;N;$!ba;s/%/%25/g;s/\n/%0A/g' | xargs -0 -I{} echo "::error title=$f-tail::{}"
+          done
